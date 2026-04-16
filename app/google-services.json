@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "129241282156",
+    "project_id": "skills2carreer",
+    "storage_bucket": "skills2carreer.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:129241282156:android:2b8d608353a524defb4a49",
+        "android_client_info": {
+          "package_name": "com.example.skill2career"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhlBqwmrpd3ce9t2OZwTlKASY4V525UkE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
