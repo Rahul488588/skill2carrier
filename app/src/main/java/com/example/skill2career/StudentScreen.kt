@@ -34,6 +34,29 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+// ─── Classical Professional Palette ────────────────────────────────────────────
+private val NavyDeep        = Color(0xFF1B2A4A)
+private val NavyMid         = Color(0xFF2E3D5E)
+private val NavyLight       = Color(0xFF3A4F7A)
+private val Gold            = Color(0xFFC9A84C)
+private val GoldLight       = Color(0xFFF0EAD5)
+private val Ivory           = Color(0xFFF5F0E8)
+private val CardSurface     = Color(0xFFFAF8F4)
+private val TextPrimary     = Color(0xFF1A1A2E)
+private val TextSecondary   = Color(0xFF4A4F6A)
+private val TextMuted       = Color(0xFF8B8FA8)
+private val DividerWarm     = Color(0xFF2E3D5E)
+private val DividerLight    = Color(0xFFD4C5A9)
+private val ForestGreen     = Color(0xFF2D5A3D)
+private val ForestGreenBg   = Color(0xFFD5E8DC)
+private val Burgundy        = Color(0xFF7A2A35)
+private val BurgundyBg      = Color(0xFFF0D5D5)
+private val SidebarBg       = NavyDeep
+private val SidebarSelected = Color(0xFF243552)
+private val SidebarIconInactive = Color(0xFF8BA3CC)
+private val SidebarTextInactive = Color(0xFFB0BDD0)
+// ───────────────────────────────────────────────────────────────────────────────
+
 data class Stat(
     val count: String,
     val title: String,
@@ -71,32 +94,32 @@ fun StudentScreen(navController: NavController, mainViewModel: MainViewModel) {
                                 "Dashboard",
                                 fontWeight = FontWeight.SemiBold,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color(0xFF1E293B)
+                                color = Color.White
                             )
                             Text(
                                 mainViewModel.currentUser.value?.name ?: "Student",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF64748B)
+                                color = Color(0xFFADB8CC)
                             )
                         }
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color(0xFF64748B))
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Gold)
                         }
                     },
                     actions = {
                         IconButton(onClick = { }) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color(0xFF64748B))
+                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Gold)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White,
-                        titleContentColor = Color(0xFF1E293B)
+                        containerColor = NavyDeep,
+                        titleContentColor = Color.White
                     )
                 )
             },
-            containerColor = Color(0xFFF8FAFC)
+            containerColor = Ivory
         ) { paddingValues ->
             Column(
                 modifier = Modifier
@@ -145,13 +168,13 @@ fun GreetingSection(mainViewModel: MainViewModel) {
             text = "$greeting, $userName",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF0F172A)
+            color = TextPrimary
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "Here's what's happening with your career journey",
             style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF64748B)
+            color = TextSecondary
         )
     }
 }
@@ -167,7 +190,7 @@ fun SectionHeader(title: String) {
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF0F172A)
+            color = NavyDeep
         )
     }
 }
@@ -206,8 +229,8 @@ fun QuickActionCard(title: String, icon: ImageVector, onClick: () -> Unit) {
             .aspectRatio(1.5f)
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        colors = CardDefaults.cardColors(containerColor = CardSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
@@ -219,13 +242,13 @@ fun QuickActionCard(title: String, icon: ImageVector, onClick: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .background(Color(0xFFEFF6FF), RoundedCornerShape(12.dp)),
+                    .background(NavyDeep.copy(alpha = 0.09f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = Color(0xFF3B82F6),
+                    tint = NavyDeep,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -234,7 +257,7 @@ fun QuickActionCard(title: String, icon: ImageVector, onClick: () -> Unit) {
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFF374151)
+                color = TextPrimary
             )
         }
     }
@@ -247,8 +270,8 @@ fun RecentOpportunitiesCard(navController: NavController, mainViewModel: MainVie
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        colors = CardDefaults.cardColors(containerColor = CardSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -260,7 +283,7 @@ fun RecentOpportunitiesCard(navController: NavController, mainViewModel: MainVie
                     text = "Latest Opportunities",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF0F172A)
+                    color = NavyDeep
                 )
                 TextButton(
                     onClick = {
@@ -274,7 +297,7 @@ fun RecentOpportunitiesCard(navController: NavController, mainViewModel: MainVie
                     Text(
                         "View All",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF2563EB)
+                        color = Gold
                     )
                 }
             }
@@ -291,7 +314,7 @@ fun RecentOpportunitiesCard(navController: NavController, mainViewModel: MainVie
                     Text(
                         text = "No opportunities available",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF94A3B8)
+                        color = TextMuted
                     )
                 }
             } else {
@@ -325,9 +348,9 @@ fun RecentOpportunityItem(opportunity: Opportunity, onClick: () -> Unit) {
                 .size(40.dp)
                 .background(
                     when (opportunity.safeType) {
-                        OpportunityType.Internship -> Color(0xFFDBEAFE)
-                        OpportunityType.Job -> Color(0xFFFEF3C7)
-                        OpportunityType.Scholarship -> Color(0xFFD1FAE5)
+                        OpportunityType.Internship -> NavyDeep.copy(alpha = 0.10f)
+                        OpportunityType.Job        -> GoldLight
+                        OpportunityType.Scholarship -> ForestGreenBg
                     },
                     RoundedCornerShape(8.dp)
                 ),
@@ -336,14 +359,14 @@ fun RecentOpportunityItem(opportunity: Opportunity, onClick: () -> Unit) {
             Icon(
                 imageVector = when (opportunity.safeType) {
                     OpportunityType.Internship -> Icons.Default.Work
-                    OpportunityType.Job -> Icons.Default.Business
+                    OpportunityType.Job        -> Icons.Default.Business
                     OpportunityType.Scholarship -> Icons.Default.School
                 },
                 contentDescription = null,
                 tint = when (opportunity.safeType) {
-                    OpportunityType.Internship -> Color(0xFF3B82F6)
-                    OpportunityType.Job -> Color(0xFFF59E0B)
-                    OpportunityType.Scholarship -> Color(0xFF10B981)
+                    OpportunityType.Internship -> NavyDeep
+                    OpportunityType.Job        -> Gold
+                    OpportunityType.Scholarship -> ForestGreen
                 },
                 modifier = Modifier.size(20.dp)
             )
@@ -354,20 +377,20 @@ fun RecentOpportunityItem(opportunity: Opportunity, onClick: () -> Unit) {
                 text = opportunity.title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFF0F172A),
+                color = TextPrimary,
                 maxLines = 1
             )
             Text(
                 text = opportunity.company,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF64748B),
+                color = TextSecondary,
                 maxLines = 1
             )
         }
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = Color(0xFF94A3B8)
+            tint = TextMuted
         )
     }
 }
@@ -382,7 +405,7 @@ fun Sidebar(
     val currentRoute = navController.currentBackStackEntry?.destination?.route
 
     ModalDrawerSheet(
-        drawerContainerColor = Color.White,
+        drawerContainerColor = SidebarBg,
         drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -391,12 +414,12 @@ fun Sidebar(
                     modifier = Modifier
                         .size(40.dp)
                         .background(
-                            brush = Brush.linearGradient(listOf(Color(0xFF3B82F6), Color(0xFF1D4ED8))),
+                            brush = Brush.linearGradient(listOf(Gold, Color(0xFFB8942E))),
                             shape = RoundedCornerShape(10.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("S2C", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("S2C", color = NavyDeep, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
@@ -404,18 +427,18 @@ fun Sidebar(
                         text = "Skill2Career",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF0F172A)
+                        color = Color.White
                     )
                     Text(
                         text = mainViewModel.currentUser.value?.name ?: "Student",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF64748B)
+                        color = SidebarTextInactive
                     )
                 }
             }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color(0xFFE2E8F0))
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = DividerWarm)
         Spacer(modifier = Modifier.height(12.dp))
 
         val menuItems = listOf(
@@ -446,7 +469,7 @@ fun Sidebar(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color(0xFFE2E8F0))
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = DividerWarm)
         Spacer(modifier = Modifier.height(8.dp))
 
         DrawerItem("Logout", Icons.AutoMirrored.Filled.Logout, false) {
@@ -479,7 +502,7 @@ fun DrawerItem(
             .padding(horizontal = 8.dp, vertical = 2.dp)
             .clip(RoundedCornerShape(8.dp))
             .clickable { onClick() },
-        color = if (isSelected) Color(0xFFEFF6FF) else Color.Transparent
+        color = if (isSelected) SidebarSelected else Color.Transparent
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -488,14 +511,14 @@ fun DrawerItem(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = if (isSelected) Color(0xFF2563EB) else Color(0xFF64748B),
+                tint = if (isSelected) Gold else SidebarIconInactive,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isSelected) Color(0xFF2563EB) else Color(0xFF334155),
+                color = if (isSelected) Gold else SidebarTextInactive,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
             )
         }
@@ -509,10 +532,10 @@ fun StatsGrid(navController: NavController, mainViewModel: MainViewModel) {
     val opportunitiesCount = mainViewModel.opportunities.size.toString()
 
     val stats = listOf(
-        Stat(opportunitiesCount, "Opportunities", Icons.AutoMirrored.Filled.TrendingUp, Color(0xFF34A853), "opportunities"),
-        Stat(appliedCount, "Applied", Icons.Default.CheckCircle, Color(0xFF1A73E8), "myApplications"),
-        Stat(scholarshipCount, "Scholarships", Icons.Default.School, Color(0xFFFBBC04), "opportunities?filter=Scholarship"),
-        Stat("3", "Notifications", Icons.Default.Notifications, Color(0xFFEA4335), null)
+        Stat(opportunitiesCount, "Opportunities", Icons.AutoMirrored.Filled.TrendingUp, ForestGreen, "opportunities"),
+        Stat(appliedCount, "Applied", Icons.Default.CheckCircle, NavyDeep, "myApplications"),
+        Stat(scholarshipCount, "Scholarships", Icons.Default.School, Gold, "opportunities?filter=Scholarship"),
+        Stat("3", "Notifications", Icons.Default.Notifications, Burgundy, null)
     )
 
     LazyVerticalGrid(
@@ -561,8 +584,8 @@ fun StatCard(stat: Stat, navController: NavController, onClick: () -> Unit) {
                 }
             },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        colors = CardDefaults.cardColors(containerColor = CardSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
@@ -577,7 +600,7 @@ fun StatCard(stat: Stat, navController: NavController, onClick: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .background(stat.color.copy(alpha = 0.1f), CircleShape),
+                        .background(stat.color.copy(alpha = 0.12f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -590,7 +613,7 @@ fun StatCard(stat: Stat, navController: NavController, onClick: () -> Unit) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = Color(0xFF94A3B8),
+                    tint = TextMuted,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -599,12 +622,12 @@ fun StatCard(stat: Stat, navController: NavController, onClick: () -> Unit) {
                 text = stat.count,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF0F172A)
+                color = TextPrimary
             )
             Text(
                 text = stat.title,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF64748B)
+                color = TextSecondary
             )
         }
     }
