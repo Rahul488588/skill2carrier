@@ -395,7 +395,7 @@ fun main() {
     }
 
     val localIp = getLocalIpAddress()
-    println("🌐 Server will be accessible at: http://$localIp:8080")
+    println("🌐 Server will be accessible at: http://$localIp:5000")
     
     // Check if setup needed
     if (!hasAnyAdmin()) {
@@ -404,7 +404,7 @@ fun main() {
         println("⚠️  POST to /admin/setup with: { setupToken: '$setupToken', user: {...}, password: '...' }")
     }
 
-    embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
+    embeddedServer(Netty, port = 5000, host = "0.0.0.0") {
         install(ContentNegotiation) {
             gson {
                 setPrettyPrinting()
