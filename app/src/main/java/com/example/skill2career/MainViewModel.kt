@@ -52,30 +52,7 @@ class MainViewModel(application: AndroidApp) : AndroidViewModel(application) {
         refreshData()
     }
 
-    // Public method to refresh opportunities (called when switching to Manage tab)
-    fun refreshOpportunities() {
-        viewModelScope.launch {
-            try {
-                val userRole = currentUser.value?.role ?: "Student"
-                val userEmail = currentUser.value?.email ?: ""
-                println("🔄 Refreshing opportunities for role: $userRole")
-                val response = api.getOpportunities(userRole, userEmail)
-                if (response.isSuccessful && response.body() != null) {
-                    val remoteOpps = response.body()!!
-                    opportunities.clear()
-                    opportunities.addAll(remoteOpps)
-                    db.opportunityDao().insertOpportunities(remoteOpps.map { it.toEntity(gson) })
-                    println("✅ Refreshed ${remoteOpps.size} opportunities")
-                } else {
-                    println("❌ Failed to refresh opportunities: ${response.errorBody()?.string()}")
-                }
-            } catch (e: Exception) {
-                println("❌ Error refreshing opportunities: ${e.message}")
-            }
-        }
-    }
-
-    private fun refreshData() {
+    fun refreshData() {
         viewModelScope.launch {
             // Load local data immediately for instant UI response
             loadLocalOpportunities()
@@ -667,18 +644,19 @@ class MainViewModel(application: AndroidApp) : AndroidViewModel(application) {
             try {
                 isFetchingAIOpportunities.value = true
                 val response = api.fetchAIOpportunities()
-                isFetchingAIOpportunities.value = false
                 
                 if (response.isSuccessful) {
                     fetchPendingAIOpportunities()
+                    refreshOpportunities()
                     onResult(true, null)
                 } else {
                     val error = response.errorBody()?.string() ?: "Failed to fetch opportunities"
                     onResult(false, error)
                 }
             } catch (e: Exception) {
-                isFetchingAIOpportunities.value = false
                 onResult(false, e.message)
+            } finally {
+                isFetchingAIOpportunities.value = false
             }
         }
     }
@@ -710,7 +688,7 @@ class MainViewModel(application: AndroidApp) : AndroidViewModel(application) {
                 val response = api.approveAIOpportunity(id)
                 if (response.isSuccessful) {
                     fetchPendingAIOpportunities()
-                    // Also refresh main opportunities list so it appears in Manage tab
+                    // Refresh main opportunities list to show newly approved opportunities
                     refreshOpportunities()
                     onResult(true, null)
                 } else {
@@ -721,6 +699,25 @@ class MainViewModel(application: AndroidApp) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun refreshOpportunities() {
+        viewModelScope.launch {
+            try {
+                val userRole = currentUser.value?.role ?: "Student"
+                val userEmail = currentUser.value?.email ?: ""
+                val response = api.getOpportunities(userRole, userEmail)
+                if (response.isSuccessful && response.body() != null) {
+                    val remoteOpps = response.body()!!
+                    opportunities.clear()
+                    opportunities.addAll(remoteOpps)
+                    db.opportunityDao().insertOpportunities(remoteOpps.map { it.toEntity(gson) })
+                    println("✅ Refreshed opportunities list: ${opportunities.size} items")
+                }
+            } catch (e: Exception) {
+                println("❌ Error refreshing opportunities: ${e.message}")
+            }
+        }
+    }
     
     fun rejectAIOpportunity(id: String, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
@@ -728,6 +725,7 @@ class MainViewModel(application: AndroidApp) : AndroidViewModel(application) {
                 val response = api.rejectAIOpportunity(id)
                 if (response.isSuccessful) {
                     fetchPendingAIOpportunities()
+                    refreshOpportunities()
                     onResult(true, null)
                 } else {
                     onResult(false, response.errorBody()?.string() ?: "Failed to reject")
@@ -763,15 +761,15 @@ class MainViewModel(application: AndroidApp) : AndroidViewModel(application) {
 fun User.toEntity(password: String) = UserEntity(email, name, role, password, phoneNumber, branch)
 fun UserEntity.toDomain() = User(name, email, role, phoneNumber, branch)
 
-fun Opportunity.toEntity(gson: Gson) = OpportunityEntity(id, title, company, type.name, gson.toJson(tags), location, stipendOrSalary, date, minCgpa)
-fun OpportunityEntity.toDomain(gson: Gson) = Opportunity(id, title, company, OpportunityType.valueOf(type), gson.fromJson(tagsJson, object : TypeToken<List<String>>() {}.type), location, stipendOrSalary, date, minCgpa)
+fun Opportunity.toEntity(gson: Gson) = OpportunityEntity(id, title, company, (type ?: OpportunityType.Internship).name, gson.toJson(tags), location, stipendOrSalary, date, minCgpa)
+fun OpportunityEntity.toDomain(gson: Gson) = Opportunity(id, title, company, OpportunityType.safeValueOf(type), gson.fromJson(tagsJson, object : TypeToken<List<String>>() {}.type), location, stipendOrSalary, date, minCgpa)
 
 fun Application.toEntity() = ApplicationEntity(
     id = id,
     opportunityId = opportunity.id,
     opportunityTitle = opportunity.title,
     opportunityCompany = opportunity.company,
-    opportunityType = opportunity.type.name,
+    opportunityType = opportunity.safeType.name,
     applicantName = applicantName,
     applicantEmail = applicantEmail,
     whyApply = whyApply,
@@ -784,7 +782,7 @@ fun Application.toEntity() = ApplicationEntity(
 
 fun ApplicationEntity.toDomain() = Application(
     id = id,
-    opportunity = Opportunity(id = opportunityId, title = opportunityTitle, company = opportunityCompany, type = OpportunityType.valueOf(opportunityType)),
+    opportunity = Opportunity(id = opportunityId, title = opportunityTitle, company = opportunityCompany, type = OpportunityType.safeValueOf(opportunityType)),
     applicantName = applicantName,
     applicantEmail = applicantEmail,
     whyApply = whyApply,

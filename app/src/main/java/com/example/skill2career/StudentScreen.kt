@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -64,58 +66,65 @@ fun StudentScreen(navController: NavController, mainViewModel: MainViewModel) {
             topBar = {
                 TopAppBar(
                     title = {
-                        Text(
-                            "Dashboard",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleLarge
-                        )
+                        Column {
+                            Text(
+                                "Dashboard",
+                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color(0xFF1E293B)
+                            )
+                            Text(
+                                mainViewModel.currentUser.value?.name ?: "Student",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF64748B)
+                            )
+                        }
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color(0xFF64748B))
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { }) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color(0xFF64748B))
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
+                        containerColor = Color.White,
+                        titleContentColor = Color(0xFF1E293B)
                     )
                 )
             },
-            containerColor = Color(0xFFF8F9FA)
+            containerColor = Color(0xFFF8FAFC)
         ) { paddingValues ->
-            Box(modifier = Modifier.fillMaxSize()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(Color(0xFF1A73E8).copy(alpha = 0.12f), Color.Transparent)
-                            )
-                        )
-                )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+            ) {
+                GreetingSection(mainViewModel)
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(horizontal = 16.dp)
-                ) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    GreetingSection(mainViewModel)
+                Spacer(modifier = Modifier.height(24.dp))
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                StatsGrid(navController, mainViewModel)
 
-                    StatsGrid(navController, mainViewModel)
-                    
-                    Spacer(modifier = Modifier.height(32.dp))
-                    
-                    SectionHeader("Recommended for you")
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    RecommendationCard()
-                }
+                Spacer(modifier = Modifier.height(32.dp))
+
+                SectionHeader("Quick Actions")
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                QuickActionsGrid(navController)
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                SectionHeader("Recent Opportunities")
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                RecentOpportunitiesCard(navController, mainViewModel)
             }
         }
     }
@@ -123,86 +132,243 @@ fun StudentScreen(navController: NavController, mainViewModel: MainViewModel) {
 
 @Composable
 fun GreetingSection(mainViewModel: MainViewModel) {
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { 
-        delay(100)
-        visible = true 
+    val userName = mainViewModel.currentUser.value?.name ?: "Student"
+    val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val greeting = when (currentHour) {
+        in 0..11 -> "Good morning"
+        in 12..17 -> "Good afternoon"
+        else -> "Good evening"
     }
 
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(tween(1000)) + slideInHorizontally(tween(800)) { -100 }
-    ) {
-        Column {
-            Text(
-                text = "Welcome back, ${mainViewModel.currentUser.value?.name ?: "Student"} 👋",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF202124)
-            )
-            Text(
-                text = "Let's find your dream career today.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray
-            )
-        }
+    Column {
+        Text(
+            text = "$greeting, $userName",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF0F172A)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Here's what's happening with your career journey",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color(0xFF64748B)
+        )
     }
 }
 
 @Composable
 fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = Color(0xFF202124)
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF0F172A)
+        )
+    }
 }
 
 @Composable
-fun RecommendationCard() {
-    var isHovered by remember { mutableStateOf(false) }
-    val cardScale by animateFloatAsState(if (isHovered) 1.02f else 1f, label = "cardScale")
+fun QuickActionsGrid(navController: NavController) {
+    val actions = listOf(
+        Triple("Browse Jobs", Icons.Default.Work, "opportunities"),
+        Triple("My Applications", Icons.Default.Assignment, "myApplications"),
+        Triple("Resume Builder", Icons.Default.Description, "resumeBuilder"),
+        Triple("CGPA Tracker", Icons.Default.BarChart, "cgpaTracker")
+    )
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(130.dp)
-            .graphicsLayer(scaleX = cardScale, scaleY = cardScale)
-            .shadow(if (isHovered) 12.dp else 4.dp, RoundedCornerShape(20.dp))
-            .clickable { isHovered = !isHovered },
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFE8F0FE)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome, 
-                    contentDescription = null, 
-                    tint = Color(0xFF1A73E8),
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(20.dp))
-            Column {
-                Text("AI Match: Software Intern", fontWeight = FontWeight.Bold)
-                Text("Based on your skills", fontSize = 12.sp, color = Color.Gray)
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(modifier = Modifier.size(40.dp, 16.dp).background(Color(0xFFE6F4EA), RoundedCornerShape(4.dp)))
-                    Box(modifier = Modifier.size(60.dp, 16.dp).background(Color(0xFFFEF7E0), RoundedCornerShape(4.dp)))
+        itemsIndexed(actions) { index, (title, icon, route) ->
+            QuickActionCard(title, icon) {
+                try {
+                    navController.navigate(route)
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }
+    }
+}
+
+@Composable
+fun QuickActionCard(title: String, icon: ImageVector, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1.5f)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color(0xFFEFF6FF), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color(0xFF3B82F6),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF374151)
+            )
+        }
+    }
+}
+
+@Composable
+fun RecentOpportunitiesCard(navController: NavController, mainViewModel: MainViewModel) {
+    val recentOpportunities = mainViewModel.opportunities.take(3)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Latest Opportunities",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF0F172A)
+                )
+                TextButton(
+                    onClick = {
+                        try {
+                            navController.navigate("opportunities")
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                ) {
+                    Text(
+                        "View All",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF2563EB)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (recentOpportunities.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No opportunities available",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF94A3B8)
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    recentOpportunities.forEach { opp ->
+                        RecentOpportunityItem(opp) {
+                            try {
+                                navController.navigate("opportunities")
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RecentOpportunityItem(opportunity: Opportunity, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(
+                    when (opportunity.safeType) {
+                        OpportunityType.Internship -> Color(0xFFDBEAFE)
+                        OpportunityType.Job -> Color(0xFFFEF3C7)
+                        OpportunityType.Scholarship -> Color(0xFFD1FAE5)
+                    },
+                    RoundedCornerShape(8.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = when (opportunity.safeType) {
+                    OpportunityType.Internship -> Icons.Default.Work
+                    OpportunityType.Job -> Icons.Default.Business
+                    OpportunityType.Scholarship -> Icons.Default.School
+                },
+                contentDescription = null,
+                tint = when (opportunity.safeType) {
+                    OpportunityType.Internship -> Color(0xFF3B82F6)
+                    OpportunityType.Job -> Color(0xFFF59E0B)
+                    OpportunityType.Scholarship -> Color(0xFF10B981)
+                },
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = opportunity.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF0F172A),
+                maxLines = 1
+            )
+            Text(
+                text = opportunity.company,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF64748B),
+                maxLines = 1
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Color(0xFF94A3B8)
+        )
     }
 }
 
@@ -213,36 +379,44 @@ fun Sidebar(
     mainViewModel: MainViewModel
 ) {
     val scope = rememberCoroutineScope()
+    val currentRoute = navController.currentBackStackEntry?.destination?.route
 
     ModalDrawerSheet(
         drawerContainerColor = Color.White,
-        drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
+        drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(40.dp)
                         .background(
-                            brush = Brush.linearGradient(listOf(Color(0xFF1A73E8), Color(0xFF4285F4))),
-                            shape = RoundedCornerShape(12.dp)
+                            brush = Brush.linearGradient(listOf(Color(0xFF3B82F6), Color(0xFF1D4ED8))),
+                            shape = RoundedCornerShape(10.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("S2C", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("S2C", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = "Skill2Career",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A73E8)
-                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Skill2Career",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF0F172A)
+                    )
+                    Text(
+                        text = mainViewModel.currentUser.value?.name ?: "Student",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF64748B)
+                    )
+                }
             }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color.LightGray.copy(alpha = 0.2f))
-        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color(0xFFE2E8F0))
+        Spacer(modifier = Modifier.height(12.dp))
 
         val menuItems = listOf(
             Triple("Dashboard", Icons.Default.Home, "studentScreen"),
@@ -256,11 +430,15 @@ fun Sidebar(
         )
 
         menuItems.forEach { (title, icon, route) ->
-            DrawerItem(title, icon) {
+            DrawerItem(title, icon, currentRoute == route) {
                 scope.launch {
                     drawerState.close()
-                    navController.navigate(route) {
-                        if (route == "studentScreen") popUpTo("studentScreen") { inclusive = true }
+                    try {
+                        navController.navigate(route) {
+                            if (route == "studentScreen") popUpTo("studentScreen") { inclusive = true }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
             }
@@ -268,16 +446,23 @@ fun Sidebar(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        DrawerItem("Logout", Icons.Default.ExitToApp) {
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color(0xFFE2E8F0))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        DrawerItem("Logout", Icons.AutoMirrored.Filled.Logout, false) {
             scope.launch {
                 drawerState.close()
                 mainViewModel.logout()
-                navController.navigate("login") {
-                    popUpTo(0) { inclusive = true }
+                try {
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
     }
 }
 
@@ -285,15 +470,16 @@ fun Sidebar(
 fun DrawerItem(
     title: String,
     icon: ImageVector,
+    isSelected: Boolean = false,
     onClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(8.dp))
             .clickable { onClick() },
-        color = Color.Transparent
+        color = if (isSelected) Color(0xFFEFF6FF) else Color.Transparent
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -302,15 +488,15 @@ fun DrawerItem(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = Color(0xFF5F6368),
-                modifier = Modifier.size(24.dp)
+                tint = if (isSelected) Color(0xFF2563EB) else Color(0xFF64748B),
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color(0xFF3C4043),
-                fontWeight = FontWeight.Medium
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isSelected) Color(0xFF2563EB) else Color(0xFF334155),
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
             )
         }
     }
@@ -321,7 +507,7 @@ fun StatsGrid(navController: NavController, mainViewModel: MainViewModel) {
     val appliedCount = mainViewModel.myApplications.size.toString()
     val scholarshipCount = mainViewModel.myApplications.count { it.opportunity.type == OpportunityType.Scholarship }.toString()
     val opportunitiesCount = mainViewModel.opportunities.size.toString()
-    
+
     val stats = listOf(
         Stat(opportunitiesCount, "Opportunities", Icons.AutoMirrored.Filled.TrendingUp, Color(0xFF34A853), "opportunities"),
         Stat(appliedCount, "Applied", Icons.Default.CheckCircle, Color(0xFF1A73E8), "myApplications"),
@@ -334,7 +520,7 @@ fun StatsGrid(navController: NavController, mainViewModel: MainViewModel) {
         contentPadding = PaddingValues(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.height(280.dp) 
+        modifier = Modifier.height(280.dp)
     ) {
         itemsIndexed(stats) { index, item ->
             var visible by remember { mutableStateOf(false) }
@@ -348,8 +534,14 @@ fun StatsGrid(navController: NavController, mainViewModel: MainViewModel) {
                 visible = visible,
                 enter = fadeIn(tween(600)) + scaleIn(tween(600), initialScale = 0.8f) + slideInVertically(tween(600)) { 50 }
             ) {
-                StatCard(item) {
-                    item.route?.let { navController.navigate(it) }
+                StatCard(item, navController) {
+                    item.route?.let {
+                        try {
+                            navController.navigate(it)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
                 }
             }
         }
@@ -357,74 +549,62 @@ fun StatsGrid(navController: NavController, mainViewModel: MainViewModel) {
 }
 
 @Composable
-fun StatCard(stat: Stat, onClick: () -> Unit) {
-    var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.94f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "scale"
-    )
-
+fun StatCard(stat: Stat, navController: NavController, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .scale(scale)
-            .shadow(
-                elevation = if (pressed) 4.dp else 10.dp, 
-                shape = RoundedCornerShape(24.dp), 
-                ambientColor = stat.color.copy(alpha = 0.5f), 
-                spotColor = stat.color.copy(alpha = 0.5f)
-            )
             .clickable {
-                pressed = true
-                onClick()
+                try {
+                    onClick()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             },
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(24.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        LaunchedEffect(pressed) {
-            if (pressed) {
-                delay(100)
-                pressed = false
-            }
-        }
-
         Column(
             modifier = Modifier
                 .padding(20.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.Start
+                .fillMaxWidth()
         ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .background(stat.color.copy(alpha = 0.12f), CircleShape),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(stat.color.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = stat.icon,
+                        contentDescription = null,
+                        tint = stat.color,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
                 Icon(
-                    imageVector = stat.icon,
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = stat.color,
-                    modifier = Modifier.size(26.dp)
+                    tint = Color(0xFF94A3B8),
+                    modifier = Modifier.size(16.dp)
                 )
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Text(
                 text = stat.count,
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 30.sp
-                ),
-                color = Color(0xFF202124)
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF0F172A)
             )
-
             Text(
                 text = stat.title,
-                style = MaterialTheme.typography.labelLarge,
-                color = Color.Gray,
-                fontWeight = FontWeight.Medium
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF64748B)
             )
         }
     }

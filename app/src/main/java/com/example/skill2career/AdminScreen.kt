@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.filled.Visibility
@@ -125,13 +126,13 @@ fun AdminScreen(navController: NavController, mainViewModel: MainViewModel) {
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        drawerContent = { 
+        drawerContent = {
             AdminSidebar(
-                navController = navController, 
-                drawerState = drawerState, 
+                navController = navController,
+                drawerState = drawerState,
                 onTabSelect = { selectedTab = it },
                 mainViewModel = mainViewModel
-            ) 
+            )
         }
     ) {
         Scaffold(
@@ -139,15 +140,33 @@ fun AdminScreen(navController: NavController, mainViewModel: MainViewModel) {
                 TopAppBar(
                     title = {
                         Column {
-                            Text("Admin Console", fontWeight = FontWeight.ExtraBold)
-                            Text("Skill2Career Management", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                            Text(
+                                "Admin Console",
+                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color(0xFF1E293B)
+                            )
+                            Text(
+                                "Skill2Career Management",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF64748B)
+                            )
                         }
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color(0xFF64748B))
                         }
-                    }
+                    },
+                    actions = {
+                        IconButton(onClick = { }) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color(0xFF64748B))
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.White,
+                        titleContentColor = Color(0xFF1E293B)
+                    )
                 )
             },
             floatingActionButton = {
@@ -156,28 +175,37 @@ fun AdminScreen(navController: NavController, mainViewModel: MainViewModel) {
                         onClick = { showAddOpportunity = true },
                         icon = { Icon(Icons.Default.Add, contentDescription = null) },
                         text = { Text("Post Opportunity") },
-                        containerColor = Color(0xFF1A73E8),
+                        containerColor = Color(0xFF2563EB),
                         contentColor = Color.White
                     )
                 }
             },
-            containerColor = Color(0xFFF8F9FA)
+            containerColor = Color(0xFFF8FAFC)
         ) { paddingValues ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                SecondaryTabRow(
+                TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.White,
-                    contentColor = Color(0xFF1A73E8)
+                    contentColor = Color(0xFF2563EB),
+                    divider = { HorizontalDivider(color = Color(0xFFE2E8F0)) }
                 ) {
                     tabs.forEachIndexed { index, title ->
                         Tab(
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
-                            text = { Text(title, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) }
+                            text = {
+                                Text(
+                                    title,
+                                    fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (selectedTab == index) Color(0xFF2563EB) else Color(0xFF64748B)
+                                )
+                            },
+                            selectedContentColor = Color(0xFF2563EB),
+                            unselectedContentColor = Color(0xFF64748B)
                         )
                     }
                 }
@@ -200,7 +228,7 @@ fun AdminScreen(navController: NavController, mainViewModel: MainViewModel) {
 
 @Composable
 fun AdminSidebar(
-    navController: NavController, 
+    navController: NavController,
     drawerState: DrawerState,
     onTabSelect: (Int) -> Unit,
     mainViewModel: MainViewModel
@@ -208,42 +236,50 @@ fun AdminSidebar(
     val scope = rememberCoroutineScope()
     ModalDrawerSheet(
         drawerContainerColor = Color.White,
-        drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
+        drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(40.dp)
                         .background(
-                            brush = Brush.linearGradient(listOf(Color(0xFF1A73E8), Color(0xFF4285F4))),
-                            shape = RoundedCornerShape(12.dp)
+                            brush = Brush.linearGradient(listOf(Color(0xFF2563EB), Color(0xFF1E40AF))),
+                            shape = RoundedCornerShape(10.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = Color.White)
+                    Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = "S2C Admin",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A73E8)
-                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "S2C Admin",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF0F172A)
+                    )
+                    Text(
+                        text = "Management Console",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF64748B)
+                    )
+                }
             }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color.LightGray.copy(alpha = 0.2f))
-        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = Color(0xFFE2E8F0))
+        Spacer(modifier = Modifier.height(12.dp))
 
         val adminItems = listOf(
             Triple("Dashboard", Icons.Default.Dashboard, 0),
             Triple("Review Apps", Icons.Default.AssignmentInd, 1),
             Triple("Manage Content", Icons.Default.ManageAccounts, 2),
+            Triple("AI Discover", Icons.Default.AutoAwesome, 3)
         )
 
         adminItems.forEach { (title, icon, tabIndex) ->
-            DrawerItem(title, icon) {
+            AdminDrawerItem(title, icon) {
                 scope.launch {
                     onTabSelect(tabIndex)
                     drawerState.close()
@@ -253,46 +289,86 @@ fun AdminSidebar(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        DrawerItem("Logout", Icons.AutoMirrored.Filled.ExitToApp) {
+        AdminDrawerItem("Logout", Icons.AutoMirrored.Filled.Logout) {
             scope.launch {
                 mainViewModel.logout()
                 drawerState.close()
                 navController.navigate("login") {
-                    // Clear entire back stack
                     popUpTo(0) { inclusive = true }
                 }
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+    }
+}
+
+@Composable
+fun AdminDrawerItem(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { onClick() },
+        color = Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = Color(0xFF64748B),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF334155),
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 
 @Composable
 fun AdminOverview(onPostClick: () -> Unit, mainViewModel: MainViewModel) {
-    var searchQuery by remember { mutableStateOf("") }
-    val filteredStudents = mainViewModel.allStudents.filter {
-        it.name.contains(searchQuery, ignoreCase = true) || it.email.contains(searchQuery, ignoreCase = true)
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         item {
-            Text("Platform Statistics", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                "Platform Statistics",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF0F172A)
+            )
             Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                AdminStatCard("Total Students", mainViewModel.allStudents.size.toString(), Icons.Default.People, Color(0xFF1A73E8), Modifier.weight(1f))
-                AdminStatCard("Total Apps", mainViewModel.allApplications.size.toString(), Icons.Default.Description, Color(0xFF34A853), Modifier.weight(1f))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                AdminStatCard("Total Students", mainViewModel.allStudents.size.toString(), Icons.Default.People, Color(0xFF2563EB), Modifier.weight(1f))
+                AdminStatCard("Total Apps", mainViewModel.allApplications.size.toString(), Icons.Default.Description, Color(0xFF10B981), Modifier.weight(1f))
+                AdminStatCard("Opportunities", mainViewModel.opportunities.size.toString(), Icons.Default.Work, Color(0xFFF59E0B), Modifier.weight(1f))
             }
         }
 
         item {
-            Text("Quick Actions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                "Quick Actions",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF0F172A)
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                AdminActionRow("Post New Opportunity", Icons.Default.AddBusiness, Color(0xFF1A73E8), onPostClick)
+                AdminActionRow("Post New Opportunity", Icons.Default.AddBusiness, Color(0xFF2563EB), onPostClick)
             }
         }
 
@@ -302,28 +378,68 @@ fun AdminOverview(onPostClick: () -> Unit, mainViewModel: MainViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Registered Students", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("${filteredStudents.size} found", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                Text("Recent Students", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A))
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+            Spacer(modifier = Modifier.height(16.dp))
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search by name or email...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.White,
-                    focusedContainerColor = Color.White
-                ),
-                singleLine = true
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    mainViewModel.allStudents.take(5).forEach { student ->
+                        StudentListItem(student, mainViewModel)
+                        if (student != mainViewModel.allStudents.lastOrNull()) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFE2E8F0))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StudentListItem(student: User, mainViewModel: MainViewModel) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(Color(0xFFEFF6FF), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                student.name.firstOrNull()?.toString()?.uppercase() ?: "S",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF2563EB)
             )
         }
-        
-        items(filteredStudents) { student ->
-            AdminStudentRow(student, mainViewModel)
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                student.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF0F172A)
+            )
+            Text(
+                student.email,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF64748B)
+            )
         }
+        Text(
+            student.role,
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFF64748B)
+        )
     }
 }
 
@@ -331,7 +447,7 @@ fun AdminOverview(onPostClick: () -> Unit, mainViewModel: MainViewModel) {
 fun AdminApplicationsList(mainViewModel: MainViewModel) {
     if (mainViewModel.allApplications.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No applications to review", color = Color.Gray)
+            Text("No applications to review", color = Color(0xFF94A3B8))
         }
     } else {
         LazyColumn(
@@ -351,27 +467,27 @@ fun AdminAppReviewCard(app: Application, mainViewModel: MainViewModel) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier.size(40.dp).background(Color(0xFF1A73E8).copy(alpha = 0.1f), CircleShape),
+                    modifier = Modifier.size(40.dp).background(Color(0xFF2563EB).copy(alpha = 0.1f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(app.applicantName.take(1).uppercase(), color = Color(0xFF1A73E8), fontWeight = FontWeight.Bold)
+                    Text(app.applicantName.take(1).uppercase(), color = Color(0xFF2563EB), fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(app.applicantName, fontWeight = FontWeight.Bold)
-                    Text(app.opportunity.title, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    Text(app.applicantName, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A))
+                    Text(app.opportunity.title, style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B))
                 }
                 Surface(
                     color = when(app.status) {
-                        "Accepted" -> Color(0xFFE6F4EA)
-                        "Pending" -> Color(0xFFFEF7E0)
-                        else -> Color(0xFFFCE8E6)
+                        "Accepted" -> Color(0xFFD1FAE5)
+                        "Pending" -> Color(0xFFFEF3C7)
+                        else -> Color(0xFFFEE2E2)
                     },
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -380,20 +496,20 @@ fun AdminAppReviewCard(app: Application, mainViewModel: MainViewModel) {
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = when(app.status) {
-                            "Accepted" -> Color(0xFF137333)
-                            "Pending" -> Color(0xFFB06000)
-                            else -> Color(0xFFC5221F)
+                            "Accepted" -> Color(0xFF10B981)
+                            "Pending" -> Color(0xFFF59E0B)
+                            else -> Color(0xFFEF4444)
                         }
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            Text("Reason: ${app.whyApply}", style = MaterialTheme.typography.bodySmall, maxLines = 2)
+            Text("Reason: ${app.whyApply}", style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B), maxLines = 2)
 
             if (app.resumeFileName != null || app.aadharCardFileName != null || app.marksheetFileName != null) {
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Attachments:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text("Attachments:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A))
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     app.resumeFileName?.let { AttachmentChip("Resume", it, mainViewModel) }
                     app.aadharCardFileName?.let { AttachmentChip("Aadhar", it, mainViewModel) }
@@ -404,16 +520,16 @@ fun AdminAppReviewCard(app: Application, mainViewModel: MainViewModel) {
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
-                    onClick = { mainViewModel.updateApplicationStatus(app.id, "Accepted") }, 
-                    modifier = Modifier.weight(1f), 
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34A853)),
+                    onClick = { mainViewModel.updateApplicationStatus(app.id, "Accepted") },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                     enabled = app.status != "Accepted"
                 ) { Text("Approve") }
-                
+
                 OutlinedButton(
-                    onClick = { mainViewModel.updateApplicationStatus(app.id, "Rejected") }, 
+                    onClick = { mainViewModel.updateApplicationStatus(app.id, "Rejected") },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444)),
                     enabled = app.status != "Rejected"
                 ) { Text("Reject") }
             }
@@ -446,29 +562,68 @@ fun AdminManageContent(mainViewModel: MainViewModel) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text("Active Opportunities", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                "Active Opportunities",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF111827)
+            )
         }
         items(mainViewModel.opportunities) { opp ->
-            ListItem(
-                headlineContent = { Text(opp.title, fontWeight = FontWeight.Bold) },
-                supportingContent = { Text(opp.company) },
-                leadingContent = { 
-                    Icon(
-                        if (opp.type == OpportunityType.Scholarship) Icons.Default.School else Icons.Default.Work,
-                        contentDescription = null,
-                        tint = Color(0xFF1A73E8)
-                    )
-                },
-                trailingContent = {
-                    IconButton(onClick = { mainViewModel.deleteOpportunity(opp.id) }) {
-                        Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red.copy(alpha = 0.6f))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                ListItem(
+                    headlineContent = { Text(opp.title, fontWeight = FontWeight.Medium, color = Color(0xFF111827)) },
+                    supportingContent = { 
+                        Column {
+                            Text(opp.company, style = MaterialTheme.typography.bodySmall, color = Color(0xFF6B7280))
+                            Text(
+                                opp.safeType.name,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF9CA3AF)
+                            )
+                        }
+                    },
+                    leadingContent = { 
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    when (opp.safeType) {
+                                        OpportunityType.Internship -> Color(0xFFDBEAFE)
+                                        OpportunityType.Job -> Color(0xFFFEF3C7)
+                                        OpportunityType.Scholarship -> Color(0xFFD1FAE5)
+                                    },
+                                    RoundedCornerShape(8.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                if (opp.safeType == OpportunityType.Scholarship) Icons.Default.School else Icons.Default.Work,
+                                contentDescription = null,
+                                tint = when (opp.safeType) {
+                                    OpportunityType.Internship -> Color(0xFF3B82F6)
+                                    OpportunityType.Job -> Color(0xFFF59E0B)
+                                    OpportunityType.Scholarship -> Color(0xFF10B981)
+                                },
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    },
+                    trailingContent = {
+                        IconButton(onClick = { mainViewModel.deleteOpportunity(opp.id) }) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFEF4444))
+                        }
                     }
-                },
-                modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White)
-            )
+                )
+            }
         }
     }
 }
@@ -664,15 +819,38 @@ fun AdminStudentRow(user: User, mainViewModel: MainViewModel) {
 @Composable
 fun AdminStatCard(title: String, count: String, icon: ImageVector, color: Color, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier.shadow(4.dp, RoundedCornerShape(16.dp)),
+        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(count, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(title, style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(color.copy(alpha = 0.1f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                count,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF0F172A)
+            )
+            Text(
+                title,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF64748B)
+            )
         }
     }
 }
@@ -689,8 +867,8 @@ fun AdminActionRow(title: String, icon: ImageVector, color: Color, onClick: () -
                 Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Text(title, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-            Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
+            Text(title, fontWeight = FontWeight.Medium, color = Color(0xFF334155), modifier = Modifier.weight(1f))
+            Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF94A3B8))
         }
     }
 }

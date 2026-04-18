@@ -44,17 +44,11 @@ class MainActivity : ComponentActivity() {
                                     val actualRole = mainViewModel.currentUser.value?.role ?: "Student"
                                     if (actualRole == "Student") {
                                         navController.navigate("studentScreen") {
-                                            // Clear entire back stack including login
                                             popUpTo("login") { inclusive = true }
-                                            popUpTo(0) { inclusive = true }
-                                            launchSingleTop = true
                                         }
                                     } else {
                                         navController.navigate("admin") {
-                                            // Clear entire back stack including login
                                             popUpTo("login") { inclusive = true }
-                                            popUpTo(0) { inclusive = true }
-                                            launchSingleTop = true
                                         }
                                     }
                                 },

@@ -186,7 +186,7 @@ fun ApplicationStatusCard(application: Application) {
                     color = Color.Gray
                 )
             }
-            if (application.opportunity.type == OpportunityType.Scholarship) {
+            if (application.opportunity.safeType == OpportunityType.Scholarship) {
                  Text(
                     text = "Income: ${application.familyIncome}",
                     style = MaterialTheme.typography.bodySmall,
