@@ -210,15 +210,12 @@ object AdminApplicationsTable : Table("admin_applications") {
 object AIDiscoveredOpportunitiesTable : Table("ai_discovered_opportunities") {
     val id = varchar("id", 50)
     val title = varchar("title", 255)
-    val company = varchar("company", 255)
-    val type = varchar("type", 50) // "Internship" or "Scholarship"
-    val description = text("description")
+    val type = varchar("type", 50) // "internship" or "scholarship"
+    val organization = varchar("organization", 255) // Renamed from company to match requirements
     val location = varchar("location", 255).nullable()
-    val stipendOrSalary = varchar("stipendOrSalary", 100).nullable()
-    val eligibility = text("eligibility").nullable()
-    val applicationUrl = varchar("applicationUrl", 500).nullable()
     val deadline = varchar("deadline", 50).nullable()
-    val opportunitySource = varchar("opportunitySource", 255) // Source of the opportunity (e.g., "AI Search")
+    val link = varchar("link", 500).nullable() // Renamed from applicationUrl to match requirements
+    val description = text("description")
     val status = varchar("status", 50) // "pending", "approved", "rejected"
     val discoveredAt = varchar("discoveredAt", 50)
     val reviewedAt = varchar("reviewedAt", 50).nullable()
@@ -367,6 +364,25 @@ fun main() {
             StudentOpportunitiesTable, StudentApplicationsTable,  // Student isolated
             AIDiscoveredOpportunitiesTable  // AI-discovered opportunities
         )
+        
+        // 🔄 MIGRATION: Check if AIDiscoveredOpportunitiesTable has old schema (company column)
+        // and migrate to new schema (organization column)
+        try {
+            val hasOldSchema = exec("SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AI_DISCOVERED_OPPORTUNITIES' AND COLUMN_NAME = 'COMPANY'") {
+                it.next()
+            } as? Boolean ?: false
+            
+            if (hasOldSchema) {
+                println("🔄 Migrating AIDiscoveredOpportunitiesTable: renaming 'company' to 'organization'...")
+                // Drop and recreate table with new schema (data will be lost but it's just AI cache)
+                exec("DROP TABLE ai_discovered_opportunities")
+                SchemaUtils.create(AIDiscoveredOpportunitiesTable)
+                println("✅ Migration complete: AIDiscoveredOpportunitiesTable recreated with new schema")
+            }
+        } catch (e: Exception) {
+            // Table might not exist yet, ignore error
+            println("ℹ️  Migration check skipped: ${e.message}")
+        }
         
         // Initialize default admin secret if not exists
         val existingSecret = ConfigTable.select { ConfigTable.key eq "admin_secret" }.count()
@@ -1642,9 +1658,144 @@ fun main() {
                 }
             }
 
+            // 📄 Extract text from uploaded PDF/DOCX files
+            authenticate("auth-jwt") {
+                post("/extract-text") {
+                    val multipartData = call.receiveMultipart()
+                    var extractedText = ""
+                    var fileName = ""
+                    
+                    multipartData.forEachPart { part ->
+                        when (part) {
+                            is PartData.FileItem -> {
+                                val originalName = part.originalFileName ?: "file"
+                                fileName = originalName.lowercase()
+                                val fileBytes = part.streamProvider().readBytes()
+                                
+                                // Extract text based on file type
+                                extractedText = when {
+                                    fileName.endsWith(".pdf") -> extractTextFromPdf(fileBytes)
+                                    fileName.endsWith(".docx") -> extractTextFromDocx(fileBytes)
+                                    fileName.endsWith(".doc") -> extractTextFromDocx(fileBytes)
+                                    fileName.endsWith(".txt") -> String(fileBytes, Charsets.UTF_8)
+                                    else -> ""
+                                }
+                            }
+                            else -> {}
+                        }
+                        part.dispose()
+                    }
+                    
+                    if (extractedText.isNotBlank()) {
+                        call.respond(mapOf("text" to extractedText, "fileName" to fileName))
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Could not extract text from file. Supported formats: PDF, DOCX, DOC, TXT"))
+                    }
+                }
+            }
+
+            // 🤖 AI Resume Analysis Endpoint (Authenticated users)
+            authenticate("auth-jwt") {
+                post("/ai/analyze-resume") {
+                    val request = call.receive<Map<String, String>>()
+                    val resumeText = request["resumeText"] ?: ""
+                    
+                    if (resumeText.isBlank()) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "resumeText is required"))
+                        return@post
+                    }
+                    
+                    try {
+                        val aiService = OpenAIService()
+                        val analysis = aiService.analyzeResume(resumeText)
+                        call.respond(analysis)
+                    } catch (e: Exception) {
+                        println("❌ Error analyzing resume: ${e.message}")
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to e.message))
+                    }
+                }
+                
+                // 📊 Skills Gap Analysis Endpoint
+                post("/ai/skills-gap") {
+                    val request = call.receive<Map<String, String>>()
+                    val resumeText = request["resumeText"] ?: ""
+                    val targetRole = request["targetRole"] ?: ""
+                    
+                    if (resumeText.isBlank() || targetRole.isBlank()) {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "resumeText and targetRole are required"))
+                        return@post
+                    }
+                    
+                    try {
+                        val aiService = OpenAIService()
+                        val analysis = aiService.analyzeSkillsGap(resumeText, targetRole)
+                        call.respond(analysis)
+                    } catch (e: Exception) {
+                        println("❌ Error analyzing skills gap: ${e.message}")
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("error" to e.message))
+                    }
+                }
+            }
+
             // 🤖 AI-Discovered Opportunities Routes (Admin only)
-            authenticate("jwt") {
-                // 🔍 Search for AI opportunities
+            authenticate("auth-jwt") {
+                // 🔍 Fetch Latest Opportunities (New simplified endpoint)
+                post("/admin/fetch-opportunities") {
+                    val principal = call.principal<JWTPrincipal>()
+                    val tokenRole = principal?.payload?.getClaim("role")?.asString() ?: ""
+                    val adminEmail = principal?.payload?.getClaim("email")?.asString() ?: ""
+
+                    if (tokenRole != "Admin" && tokenRole != "SuperAdmin") {
+                        call.respond(HttpStatusCode.Forbidden, "Admin access required")
+                        return@post
+                    }
+
+                    try {
+                        val aiService = OpenAIService()
+                        val response = aiService.searchAIOpportunities("latest internships scholarships worldwide")
+
+                        // Parse JSON response
+                        val opportunities = gson.fromJson(response, List::class.java) as? List<Map<String, String>> ?: emptyList()
+
+                        // Store in database with pending status
+                        val currentTime = java.time.LocalDateTime.now().toString()
+                        transaction {
+                            opportunities.forEach { opp ->
+                                val id = UUID.randomUUID().toString()
+                                val title = opp["title"] ?: ""
+                                val organization = opp["organization"] ?: ""
+                                val type = opp["type"] ?: "internship"
+                                val description = opp["description"] ?: ""
+                                val location = opp["location"]
+                                val link = opp["link"]
+                                val deadline = opp["deadline"]
+
+                                AIDiscoveredOpportunitiesTable.insert {
+                                    it[AIDiscoveredOpportunitiesTable.id] = id
+                                    it[AIDiscoveredOpportunitiesTable.title] = title
+                                    it[AIDiscoveredOpportunitiesTable.organization] = organization
+                                    it[AIDiscoveredOpportunitiesTable.type] = type
+                                    it[AIDiscoveredOpportunitiesTable.description] = description
+                                    it[AIDiscoveredOpportunitiesTable.location] = location
+                                    it[AIDiscoveredOpportunitiesTable.link] = link
+                                    it[AIDiscoveredOpportunitiesTable.deadline] = deadline
+                                    it[AIDiscoveredOpportunitiesTable.status] = "pending"
+                                    it[AIDiscoveredOpportunitiesTable.discoveredAt] = currentTime
+                                    it[AIDiscoveredOpportunitiesTable.reviewedAt] = null
+                                    it[AIDiscoveredOpportunitiesTable.reviewedBy] = null
+                                }
+                            }
+                        }
+
+                        println("✅ Admin $adminEmail fetched latest opportunities: ${opportunities.size} found")
+                        call.respond(mapOf("success" to true, "opportunities" to opportunities))
+                    } catch (e: Exception) {
+                        println("❌ Error fetching opportunities: ${e.message}")
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("success" to false, "error" to e.message))
+                    }
+                }
+
+                // 🔍 Search for AI opportunities (Custom search)
                 post("/admin/ai/opportunities/search") {
                     val principal = call.principal<JWTPrincipal>()
                     val tokenRole = principal?.payload?.getClaim("role")?.asString() ?: ""
@@ -1667,7 +1818,7 @@ fun main() {
                         val aiService = OpenAIService()
                         val response = aiService.searchAIOpportunities(query)
 
-                        // Parse the JSON response
+                        // Parse JSON response
                         val opportunities = gson.fromJson(response, List::class.java) as? List<Map<String, String>> ?: emptyList()
 
                         // Store in database
@@ -1676,27 +1827,22 @@ fun main() {
                             opportunities.forEach { opp ->
                                 val id = UUID.randomUUID().toString()
                                 val title = opp["title"] ?: ""
-                                val company = opp["organization"] ?: ""
-                                val type = opp["type"] ?: "Internship"
+                                val organization = opp["organization"] ?: ""
+                                val type = opp["type"] ?: "internship"
                                 val description = opp["description"] ?: ""
                                 val location = opp["location"]
-                                val stipendOrSalary = opp["stipendOrSalary"]
-                                val eligibility = opp["eligibility"]
-                                val applicationUrl = opp["link"]
+                                val link = opp["link"]
                                 val deadline = opp["deadline"]
 
                                 AIDiscoveredOpportunitiesTable.insert {
                                     it[AIDiscoveredOpportunitiesTable.id] = id
                                     it[AIDiscoveredOpportunitiesTable.title] = title
-                                    it[AIDiscoveredOpportunitiesTable.company] = company
+                                    it[AIDiscoveredOpportunitiesTable.organization] = organization
                                     it[AIDiscoveredOpportunitiesTable.type] = type
                                     it[AIDiscoveredOpportunitiesTable.description] = description
                                     it[AIDiscoveredOpportunitiesTable.location] = location
-                                    it[AIDiscoveredOpportunitiesTable.stipendOrSalary] = stipendOrSalary
-                                    it[AIDiscoveredOpportunitiesTable.eligibility] = eligibility
-                                    it[AIDiscoveredOpportunitiesTable.applicationUrl] = applicationUrl
+                                    it[AIDiscoveredOpportunitiesTable.link] = link
                                     it[AIDiscoveredOpportunitiesTable.deadline] = deadline
-                                    it[AIDiscoveredOpportunitiesTable.opportunitySource] = "AI Search"
                                     it[AIDiscoveredOpportunitiesTable.status] = "pending"
                                     it[AIDiscoveredOpportunitiesTable.discoveredAt] = currentTime
                                     it[AIDiscoveredOpportunitiesTable.reviewedAt] = null
@@ -1730,22 +1876,20 @@ fun main() {
                                 mapOf(
                                     "id" to it[AIDiscoveredOpportunitiesTable.id],
                                     "title" to it[AIDiscoveredOpportunitiesTable.title],
-                                    "company" to it[AIDiscoveredOpportunitiesTable.company],
+                                    "organization" to it[AIDiscoveredOpportunitiesTable.organization],
                                     "type" to it[AIDiscoveredOpportunitiesTable.type],
                                     "description" to it[AIDiscoveredOpportunitiesTable.description],
                                     "location" to it[AIDiscoveredOpportunitiesTable.location],
-                                    "stipendOrSalary" to it[AIDiscoveredOpportunitiesTable.stipendOrSalary],
-                                    "eligibility" to it[AIDiscoveredOpportunitiesTable.eligibility],
-                                    "applicationUrl" to it[AIDiscoveredOpportunitiesTable.applicationUrl],
+                                    "link" to it[AIDiscoveredOpportunitiesTable.link],
                                     "deadline" to it[AIDiscoveredOpportunitiesTable.deadline],
-                                    "source" to it[AIDiscoveredOpportunitiesTable.opportunitySource],
                                     "status" to it[AIDiscoveredOpportunitiesTable.status],
                                     "discoveredAt" to it[AIDiscoveredOpportunitiesTable.discoveredAt]
                                 )
                             }
                     }
-
-                    call.respond(mapOf("opportunities" to opportunities))
+                    
+                    println("📋 Returning ${opportunities.size} pending opportunities")
+                    call.respond(opportunities)
                 }
 
                 // ✅ Approve AI-Discovered Opportunity (Admin only)
@@ -1779,17 +1923,17 @@ fun main() {
                         if (opp != null) {
                             val oppId: String = opp[AIDiscoveredOpportunitiesTable.id] ?: ""
                             val oppTitle: String = opp[AIDiscoveredOpportunitiesTable.title] ?: ""
-                            val oppCompany: String = opp[AIDiscoveredOpportunitiesTable.company] ?: ""
+                            val oppOrganization: String = opp[AIDiscoveredOpportunitiesTable.organization] ?: ""
                             val oppType: String = opp[AIDiscoveredOpportunitiesTable.type] ?: ""
                             val oppLocation: String? = opp[AIDiscoveredOpportunitiesTable.location]
-                            val oppStipend: String? = opp[AIDiscoveredOpportunitiesTable.stipendOrSalary]
+                            val oppStipend: String? = null // We don't have stipend in new schema
 
                             // Insert into StudentOpportunitiesTable for students to see
                             transaction {
                                 StudentOpportunitiesTable.insert {
                                     it[StudentOpportunitiesTable.id] = oppId
                                     it[StudentOpportunitiesTable.title] = oppTitle
-                                    it[StudentOpportunitiesTable.company] = oppCompany
+                                    it[StudentOpportunitiesTable.company] = oppOrganization
                                     it[StudentOpportunitiesTable.type] = oppType
                                     it[StudentOpportunitiesTable.tags] = gson.toJson(listOf("AI-Discovered"))
                                     it[StudentOpportunitiesTable.location] = oppLocation ?: "Not specified"
@@ -1806,7 +1950,7 @@ fun main() {
                                 AdminOpportunitiesTable.insert {
                                     it[AdminOpportunitiesTable.id] = oppId
                                     it[AdminOpportunitiesTable.title] = oppTitle
-                                    it[AdminOpportunitiesTable.company] = oppCompany
+                                    it[AdminOpportunitiesTable.company] = oppOrganization
                                     it[AdminOpportunitiesTable.type] = oppType
                                     it[AdminOpportunitiesTable.tags] = gson.toJson(listOf("AI-Discovered"))
                                     it[AdminOpportunitiesTable.location] = oppLocation ?: "Not specified"
@@ -1858,4 +2002,32 @@ fun main() {
             }
         }
     }.start(wait = true)
+}
+
+// 📄 Helper Functions for Text Extraction from PDF/DOCX
+fun extractTextFromPdf(fileBytes: ByteArray): String {
+    return try {
+        val document = org.apache.pdfbox.pdmodel.PDDocument.load(fileBytes)
+        val pdfText = org.apache.pdfbox.text.PDFTextStripper().getText(document)
+        document.close()
+        pdfText
+    } catch (e: Exception) {
+        println("❌ Error extracting text from PDF: ${e.message}")
+        ""
+    }
+}
+
+fun extractTextFromDocx(fileBytes: ByteArray): String {
+    return try {
+        val document = org.apache.poi.xwpf.usermodel.XWPFDocument(java.io.ByteArrayInputStream(fileBytes))
+        val text = StringBuilder()
+        for (paragraph in document.paragraphs) {
+            text.append(paragraph.text).append("\n")
+        }
+        document.close()
+        text.toString()
+    } catch (e: Exception) {
+        println("❌ Error extracting text from DOCX: ${e.message}")
+        ""
+    }
 }

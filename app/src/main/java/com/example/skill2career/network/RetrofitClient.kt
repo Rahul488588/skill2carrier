@@ -16,7 +16,7 @@ object RetrofitClient {
      *     - Find your laptop's IP (Run 'ipconfig' in CMD and look for IPv4 Address).
      *     - Use "http://YOUR_IP_HERE:8080/"
      */
-    private const val BASE_URL = "http://192.168.137.198:8080/"
+    private const val BASE_URL = "http://192.168.137.40:8080/"
 
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

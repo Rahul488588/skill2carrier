@@ -88,13 +88,14 @@ class MainActivity : ComponentActivity() {
                             AdminScreen(navController = navController, mainViewModel = mainViewModel)
                         }
 
-                        // OPPORTUNITIES with optional filter argument
+                        // OPPORTUNITIES - single route with optional parameter
                         composable(
-                            route = "opportunities?filter={filter}",
+                            route = "opportunities",
                             arguments = listOf(
                                 navArgument("filter") {
                                     type = NavType.StringType
                                     defaultValue = "All"
+                                    nullable = true
                                 }
                             )
                         ) { backStackEntry ->
@@ -125,6 +126,11 @@ class MainActivity : ComponentActivity() {
                         // PROFILE
                         composable("profile") {
                             ProfileScreen(navController = navController, mainViewModel = mainViewModel)
+                        }
+
+                        // 🤖 AI RESUME ANALYSIS
+                        composable("aiResumeAnalysis") {
+                            AIResumeAnalysisScreen(navController = navController, mainViewModel = mainViewModel)
                         }
                     }
                 }

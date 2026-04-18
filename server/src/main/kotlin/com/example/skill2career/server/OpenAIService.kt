@@ -115,11 +115,15 @@ class OpenAIService {
     // 🔍 Search for Opportunities using AI
     suspend fun searchAIOpportunities(query: String): String {
         val prompt = """
-            You are a career opportunity researcher. Search for current, real internships and scholarships worldwide based on the query: "$query"
+            You are a career opportunity researcher. Search for current, real opportunities based on query: "$query"
+            
+            IMPORTANT FILTERING CRITERIA:
+            - For SCHOLARSHIPS: ONLY include scholarships from Indian colleges and universities (e.g., IITs, NITs, IISc, BITS, Delhi University, etc.)
+            - For INTERNSHIPS: Include internships WORLDWIDE (any country/location)
             
             Return a JSON array of opportunities with these fields:
             - title: string
-            - type: "internship" or "scholarship"
+            - type: "Internship" or "Scholarship"
             - organization: string
             - location: string
             - deadline: string (YYYY-MM-DD format)
@@ -130,19 +134,30 @@ class OpenAIService {
             - Return ONLY current opportunities (not outdated)
             - Focus on real and verifiable sources
             - Avoid fake or duplicate entries
-            - Limit to 5-10 best opportunities
-            - Provide ONLY the JSON response, nothing else
+            - Limit to 5-10 best opportunities (mix of internships and scholarships)
+            - For Indian scholarships, specify location as the Indian city/institution name
+            - Return ONLY valid JSON. Do NOT use markdown code blocks or ```json fences.
+            - Provide raw JSON response only, nothing else
             
             Example format:
             [
                 {
                     "title": "Software Engineering Internship",
-                    "type": "internship",
+                    "type": "Internship",
                     "organization": "Google",
                     "location": "Mountain View, CA",
                     "deadline": "2025-06-30",
                     "link": "https://careers.google.com/jobs",
                     "description": "Work on real projects with experienced engineers"
+                },
+                {
+                    "title": "IIT Delhi Merit Scholarship",
+                    "type": "Scholarship",
+                    "organization": "IIT Delhi",
+                    "location": "New Delhi, India",
+                    "deadline": "2025-07-15",
+                    "link": "https://iitd.ac.in/scholarships",
+                    "description": "Merit-based scholarship for undergraduate students"
                 }
             ]
         """.trimIndent()
@@ -153,12 +168,12 @@ class OpenAIService {
     // 📊 Analyze Resume and Get Career Suggestions
     suspend fun analyzeResume(resumeText: String): ResumeAnalysis {
         val prompt = """
-            You are a professional career counselor. Analyze the resume below and create a career analysis.
+            You are a professional career counselor. Analyze resume below and create a career analysis.
 
-            DO NOT repeat the resume text. Instead, provide your original analysis.
+            DO NOT repeat resume text. Instead, provide your original analysis.
 
             Create a JSON object with these fields:
-            - summary: A 2-3 sentence summary of the candidate's profile
+            - summary: A 2-3 sentence summary of candidate's profile
             - strengths: 3-5 key strengths (as strings in an array)
             - improvements: 2-3 areas for improvement (as strings in an array)
             - careers: 3-5 recommended career paths (as strings in an array)
@@ -174,32 +189,83 @@ class OpenAIService {
             Resume to analyze:
             $resumeText
 
-            Provide ONLY the JSON response, nothing else.
+            Return ONLY valid JSON. Do NOT use markdown code blocks or ```json fences.
+            Provide raw JSON response only, nothing else.
         """.trimIndent()
 
         val response = sendChatRequest(prompt, OpenAIConfig.MODEL_RESUME_ANALYSIS)
 
         println("📝 Resume Analysis Response: $response")
 
-        // Parse the JSON response (simplified parsing)
+        // Parse JSON response (simplified parsing)
         return parseResumeAnalysis(response)
     }
 
     // 🎯 Extract Skills from Resume
     suspend fun extractSkills(resumeText: String): List<String> {
         val prompt = """
-            Extract technical skills from the following resume. Return only the skills as a JSON array of strings.
+            Extract technical skills from following resume. Return only skills as a JSON array of strings.
             
             Resume:
             $resumeText
             
-            Return ONLY the JSON array, nothing else.
+            Return ONLY valid JSON array. Do NOT use markdown code blocks or ```json fences.
+            Provide raw JSON response only, nothing else.
             Example: ["Java", "Python", "SQL", "Machine Learning"]
         """.trimIndent()
 
         val response = sendChatRequest(prompt, OpenAIConfig.MODEL_SKILL_EXTRACTION)
         
         return parseSkills(response)
+    }
+    
+    // 📊 Analyze Skills Gap for Target Role
+    suspend fun analyzeSkillsGap(resumeText: String, targetRole: String): SkillsGapAnalysis {
+        val prompt = """
+            You are a career development expert. Analyze the resume below and identify the skills gap for the target role: "$targetRole"
+            
+            Provide a detailed analysis in JSON format with these fields:
+            - targetRole: The target role name
+            - currentSkills: List of skills already present in the resume
+            - requiredSkills: List of skills typically required for the target role
+            - missingSkills: List of skills the candidate needs to learn (difference between required and current)
+            - recommendations: List of actionable recommendations to fill the gap
+            - learningResources: List of specific resources to learn missing skills (courses, certifications, tutorials)
+            
+            Return ONLY valid JSON. Do NOT use markdown code blocks or ```json fences.
+            Provide raw JSON response only, nothing else.
+            
+            Example format:
+            {
+              "targetRole": "Senior Software Engineer",
+              "currentSkills": ["Java", "Spring Boot", "MySQL"],
+              "requiredSkills": ["Java", "Spring Boot", "MySQL", "Docker", "Kubernetes", "AWS", "System Design"],
+              "missingSkills": ["Docker", "Kubernetes", "AWS", "System Design"],
+              "recommendations": [
+                "Learn containerization with Docker",
+                "Study Kubernetes for container orchestration",
+                "Get AWS Certified Solutions Architect",
+                "Practice system design interviews"
+              ],
+              "learningResources": [
+                "Docker for Beginners course on Udemy",
+                "Kubernetes for Developers course",
+                "AWS Solutions Architect Associate certification",
+                "System Design Interview book by Alex Xu"
+              ]
+            }
+            
+            Resume to analyze:
+            $resumeText
+            
+            Target Role: $targetRole
+        """.trimIndent()
+        
+        val response = sendChatRequest(prompt, OpenAIConfig.MODEL_RESUME_ANALYSIS)
+        
+        println("📊 Skills Gap Analysis Response: $response")
+        
+        return parseSkillsGapAnalysis(response, targetRole)
     }
 
     // 🔧 Send Chat Request to OpenRouter
@@ -228,17 +294,21 @@ class OpenAIService {
 
         println("🔵 OpenRouter API Request: $url")
 
+        // Serialize request manually to avoid Ktor serialization issues
+        val requestJson = Json.encodeToString(OpenRouterRequest.serializer(), request)
+        
         val responseText: String = client.post(url) {
             header(HttpHeaders.ContentType, ContentType.Application.Json)
             header(HttpHeaders.Authorization, "Bearer ${OpenAIConfig.API_KEY}")
             OpenAIConfig.HTTP_REFERER?.let { header("HTTP-Referer", it) }
             OpenAIConfig.X_TITLE?.let { header("X-Title", it) }
-            setBody(request)
+            setBody(requestJson)
         }.body()
 
         println("🔵 OpenRouter API Raw Response: $responseText")
 
-        val response: OpenRouterResponse = Json.decodeFromString(responseText)
+        val jsonParser = Json { ignoreUnknownKeys = true }
+        val response: OpenRouterResponse = jsonParser.decodeFromString(responseText)
 
         // Check for API errors
         if (response.choices.isNullOrEmpty()) {
@@ -250,7 +320,27 @@ class OpenAIService {
             throw Exception("OpenRouter API returned no content. Response: $responseText")
         }
 
-        return choice.message!!.content
+        // Extract JSON from markdown code blocks if present
+        val cleanContent = extractJsonFromMarkdown(choice.message!!.content)
+        return cleanContent
+    }
+    
+    // 🔧 Extract JSON content from markdown code blocks
+    private fun extractJsonFromMarkdown(content: String): String {
+        // Check if content is wrapped in markdown code blocks
+        val trimmed = content.trim()
+        
+        // Pattern: ```json ... ``` or ``` ... ```
+        val codeBlockRegex = Regex("```(?:json)?\\s*([\\s\\S]*?)```")
+        val match = codeBlockRegex.find(trimmed)
+        
+        return if (match != null) {
+            // Extract content from inside code block
+            match.groupValues[1].trim()
+        } else {
+            // No code block found, return trimmed content
+            trimmed
+        }
     }
 
     // 📝 Parse Resume Analysis Response
@@ -263,7 +353,7 @@ class OpenAIService {
         val improvements = extractListField(json, "improvements")
         val careers = extractListField(json, "careers")
 
-        // If JSON parsing failed, use the raw response as summary
+        // If JSON parsing failed, use raw response as summary
         val finalSummary = if (summary.isNullOrEmpty() || summary == "....") {
             println("⚠️ JSON parsing failed, using raw response")
             json.take(500) // Use first 500 chars of raw response
@@ -304,6 +394,28 @@ class OpenAIService {
             ?.map { it.trim().replace("\"", "") }
             ?.filter { it.isNotEmpty() }
     }
+    
+    // 📝 Parse Skills Gap Analysis Response
+    private fun parseSkillsGapAnalysis(json: String, targetRole: String): SkillsGapAnalysis {
+        println("🔍 Parsing skills gap analysis response...")
+        
+        // Use Gson for robust JSON parsing
+        return try {
+            val gson = com.google.gson.Gson()
+            gson.fromJson(json, SkillsGapAnalysis::class.java)
+        } catch (e: Exception) {
+            println("⚠️ JSON parsing failed, using manual parsing: ${e.message}")
+            // Fallback to manual parsing
+            SkillsGapAnalysis(
+                targetRole = targetRole,
+                currentSkills = extractListField(json, "currentSkills") ?: emptyList(),
+                requiredSkills = extractListField(json, "requiredSkills") ?: emptyList(),
+                missingSkills = extractListField(json, "missingSkills") ?: emptyList(),
+                recommendations = extractListField(json, "recommendations") ?: emptyList(),
+                learningResources = extractListField(json, "learningResources") ?: emptyList()
+            )
+        }
+    }
 }
 
 // 📊 Data Classes
@@ -312,4 +424,13 @@ data class ResumeAnalysis(
     val strengths: List<String>,
     val improvements: List<String>,
     val recommendedCareers: List<String>
+)
+
+data class SkillsGapAnalysis(
+    val targetRole: String,
+    val currentSkills: List<String>,
+    val requiredSkills: List<String>,
+    val missingSkills: List<String>,
+    val recommendations: List<String>,
+    val learningResources: List<String>
 )

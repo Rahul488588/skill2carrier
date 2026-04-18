@@ -3,13 +3,13 @@ package com.example.skill2career
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -68,12 +68,12 @@ data class Opportunity(
 fun OpportunitiesScreen(navController: NavController, initialFilter: String = "All", mainViewModel: MainViewModel) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(initialFilter) }
     val filters = listOf("All", "Internship", "Scholarship", "Job")
 
     var showApplyDialog by remember { mutableStateOf(false) }
+    var showDetailDialog by remember { mutableStateOf(false) }
     var selectedOpportunity by remember { mutableStateOf<Opportunity?>(null) }
 
     val allOpportunities = mainViewModel.opportunities
@@ -101,91 +101,91 @@ fun OpportunitiesScreen(navController: NavController, initialFilter: String = "A
             },
             containerColor = Color(0xFFF8F9FA)
         ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Search and Filter Bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Search and Filter Bar
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.weight(1.3f).height(52.dp),
-                        placeholder = { Text("Search career...", fontSize = 14.sp) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color(0xFF1A73E8)) },
-                        shape = RoundedCornerShape(16.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color.LightGray.copy(alpha = 0.4f),
-                            focusedBorderColor = Color(0xFF1A73E8)
-                        )
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.weight(1.3f).height(52.dp),
+                    placeholder = { Text("Search career...", fontSize = 14.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color(0xFF1A73E8)) },
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = Color.LightGray.copy(alpha = 0.4f),
+                        focusedBorderColor = Color(0xFF1A73E8),
+                        cursorColor = Color(0xFF1A73E8)
                     )
-                }
+                )
+            }
 
-                Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(bottom = 8.dp)
-                ) {
-                    items(filters) { filter ->
-                        val isSelected = selectedFilter == filter
-                        Surface(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { selectedFilter = filter },
-                            color = if (isSelected) Color(0xFF1A73E8) else Color.White,
-                            border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f)),
-                            shadowElevation = if (isSelected) 4.dp else 0.dp
-                        ) {
-                            Text(
-                                text = filter,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                color = if (isSelected) Color.White else Color.DarkGray,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (filteredOpportunities.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No opportunities found", color = Color.Gray)
-                    }
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(1),
-                        contentPadding = PaddingValues(bottom = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize()
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
+                items(filters) { filter ->
+                    val isSelected = selectedFilter == filter
+                    Surface(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { selectedFilter = filter },
+                        color = if (isSelected) Color(0xFF1A73E8) else Color.White,
+                        border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f)),
+                        shadowElevation = if (isSelected) 4.dp else 0.dp
                     ) {
-                        items(filteredOpportunities, key = { it.id }) { opp ->
-                            var visible by remember { mutableStateOf(false) }
-                            LaunchedEffect(opp) { visible = true }
-                            
-                            AnimatedVisibility(
-                                visible = visible,
-                                enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { 20 }
-                            ) {
-                                OpportunityCard(
-                                    opportunity = opp,
-                                    mainViewModel = mainViewModel,
-                                    onApplyClick = {
-                                        selectedOpportunity = opp
-                                        showApplyDialog = true
-                                    }
-                                )
-                            }
+                        Text(
+                            text = filter,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            color = if (isSelected) Color.White else Color.DarkGray,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (filteredOpportunities.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No opportunities found", color = Color.Gray)
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(1),
+                    contentPadding = PaddingValues(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(filteredOpportunities, key = { it.id }) { opp ->
+                        var visible by remember { mutableStateOf(false) }
+                        LaunchedEffect(opp) { visible = true }
+
+                        AnimatedVisibility(
+                            visible = visible,
+                            enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { 20 }
+                        ) {
+                            OpportunityCard(
+                                opportunity = opp,
+                                mainViewModel = mainViewModel,
+                                onApplyClick = {
+                                    selectedOpportunity = opp
+                                    showApplyDialog = true
+                                }
+                            )
                         }
                     }
                 }
@@ -199,11 +199,23 @@ fun OpportunitiesScreen(navController: NavController, initialFilter: String = "A
                 onDismiss = { showApplyDialog = false },
                 onApplySubmit = { application, uris ->
                     mainViewModel.applyForOpportunity(application, uris)
-                    Toast.makeText(context, "Application submitted successfully!", Toast.LENGTH_SHORT).show()
                     showApplyDialog = false
                 }
             )
         }
+
+        if (showDetailDialog && selectedOpportunity != null) {
+            OpportunityDetailDialog(
+                opportunity = selectedOpportunity!!,
+                mainViewModel = mainViewModel,
+                onDismiss = { showDetailDialog = false },
+                onApply = {
+                    showDetailDialog = false
+                    showApplyDialog = true
+                }
+            )
+        }
+    }
     }
 }
 
@@ -363,7 +375,12 @@ fun FileUploadButton(label: String, fileName: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun OpportunityCard(opportunity: Opportunity, mainViewModel: MainViewModel, onApplyClick: () -> Unit) {
+fun OpportunityCard(
+    opportunity: Opportunity, 
+    mainViewModel: MainViewModel, 
+    onApplyClick: () -> Unit,
+    onViewDetails: () -> Unit = {}  // Optional callback when card is clicked
+) {
     val isSaved = mainViewModel.savedOpportunities.any { it.id == opportunity.id }
     val badgeColors = when (opportunity.type) {
         OpportunityType.Internship -> Pair(Color(0xFFE8F0FE), Color(0xFF1A73E8))
@@ -372,7 +389,9 @@ fun OpportunityCard(opportunity: Opportunity, mainViewModel: MainViewModel, onAp
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(20.dp)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
@@ -387,20 +406,254 @@ fun OpportunityCard(opportunity: Opportunity, mainViewModel: MainViewModel, onAp
                     Icon(if (isSaved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, contentDescription = null, tint = if (isSaved) Color(0xFF1A73E8) else Color.Gray)
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(opportunity.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-            Text(opportunity.company, color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                InfoItem(Icons.Default.LocationOn, opportunity.location)
-                opportunity.stipendOrSalary?.let { InfoItem(Icons.Default.Payments, it) }
+            // Content area for viewing details
+            Column {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(opportunity.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                Text(opportunity.company, color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    InfoItem(Icons.Default.LocationOn, opportunity.location)
+                    opportunity.stipendOrSalary?.let { InfoItem(Icons.Default.Payments, it) }
+                }
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                Button(
+                    onClick = onApplyClick, 
+                    modifier = Modifier.fillMaxWidth().height(48.dp), 
+                    shape = RoundedCornerShape(12.dp), 
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A73E8))
+                ) {
+                    Text("Apply Now", fontWeight = FontWeight.Bold)
+                }
             }
-            
-            Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = onApplyClick, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A73E8))) {
-                Text("Apply Now", fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+// 📋 Opportunity Detail Dialog - Shows full opportunity details in-app
+@Composable
+fun OpportunityDetailDialog(
+    opportunity: Opportunity,
+    mainViewModel: MainViewModel,
+    onDismiss: () -> Unit,
+    onApply: () -> Unit
+) {
+    val isSaved = mainViewModel.savedOpportunities.any { it.id == opportunity.id }
+    val badgeColors = when (opportunity.type) {
+        OpportunityType.Internship -> Pair(Color(0xFFE8F0FE), Color(0xFF1A73E8))
+        OpportunityType.Scholarship -> Pair(Color(0xFFE6F4EA), Color(0xFF34A853))
+        OpportunityType.Job -> Pair(Color(0xFFFEF7E0), Color(0xFFFBBC04))
+    }
+    
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .wrapContentHeight(),
+            shape = RoundedCornerShape(24.dp),
+            color = Color.White
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // Header with type badge and close button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        color = badgeColors.first, 
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            opportunity.type.name, 
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), 
+                            style = MaterialTheme.typography.labelMedium, 
+                            color = badgeColors.second, 
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Save button
+                        IconButton(onClick = { 
+                            mainViewModel.toggleSaveOpportunity(opportunity)
+                        }) {
+                            Icon(
+                                if (isSaved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, 
+                                contentDescription = if (isSaved) "Unsave" else "Save",
+                                tint = if (isSaved) Color(0xFF1A73E8) else Color.Gray,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        // Close button
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                Icons.Default.Close, 
+                                contentDescription = "Close",
+                                tint = Color.Gray,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Title and Company
+                Text(
+                    opportunity.title, 
+                    style = MaterialTheme.typography.headlineSmall, 
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF202124)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    opportunity.company, 
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color(0xFF5F6368),
+                    fontWeight = FontWeight.Medium
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Details Section
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Location
+                    DetailRow(
+                        icon = Icons.Default.LocationOn,
+                        label = "Location",
+                        value = opportunity.location
+                    )
+                    
+                    // Stipend/Salary
+                    opportunity.stipendOrSalary?.let {
+                        DetailRow(
+                            icon = Icons.Default.Payments,
+                            label = if (opportunity.type == OpportunityType.Scholarship) "Amount" else "Stipend/Salary",
+                            value = it
+                        )
+                    }
+                    
+                    // Date/Deadline
+                    if (opportunity.date.isNotBlank()) {
+                        DetailRow(
+                            icon = Icons.Default.CalendarToday,
+                            label = "Posted Date",
+                            value = opportunity.date
+                        )
+                    }
+                    
+                    // Min CGPA
+                    opportunity.minCgpa?.let {
+                        DetailRow(
+                            icon = Icons.Default.School,
+                            label = "Minimum CGPA Required",
+                            value = "%.2f".format(it)
+                        )
+                    }
+                }
+                
+                // Tags
+                if (opportunity.tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        "Tags",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF202124)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        opportunity.tags.take(5).forEach { tag ->
+                            Surface(
+                                color = Color(0xFFF1F3F4),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text(
+                                    tag,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF5F6368)
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                
+                // Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Close")
+                    }
+                    
+                    Button(
+                        onClick = {
+                            onDismiss()
+                            onApply()
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A73E8))
+                    ) {
+                        Text("Apply Now", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
+        }
+    }
+}
+
+// Helper composable for detail rows
+@Composable
+private fun DetailRow(icon: ImageVector, label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = Color(0xFF1A73E8)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = Color(0xFF5F6368)
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color(0xFF202124),
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }

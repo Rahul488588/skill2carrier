@@ -11,6 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import com.example.skill2career.network.AdminRequest
 import com.example.skill2career.network.AuthResponse
 import com.example.skill2career.network.Notification
+import com.example.skill2career.network.ResumeAnalysis
+import com.example.skill2career.network.SkillsGapAnalysis
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.skill2career.network.LoginRequest
@@ -48,6 +50,29 @@ class MainViewModel(application: AndroidApp) : AndroidViewModel(application) {
             }
         }
         refreshData()
+    }
+
+    // Public method to refresh opportunities (called when switching to Manage tab)
+    fun refreshOpportunities() {
+        viewModelScope.launch {
+            try {
+                val userRole = currentUser.value?.role ?: "Student"
+                val userEmail = currentUser.value?.email ?: ""
+                println("🔄 Refreshing opportunities for role: $userRole")
+                val response = api.getOpportunities(userRole, userEmail)
+                if (response.isSuccessful && response.body() != null) {
+                    val remoteOpps = response.body()!!
+                    opportunities.clear()
+                    opportunities.addAll(remoteOpps)
+                    db.opportunityDao().insertOpportunities(remoteOpps.map { it.toEntity(gson) })
+                    println("✅ Refreshed ${remoteOpps.size} opportunities")
+                } else {
+                    println("❌ Failed to refresh opportunities: ${response.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                println("❌ Error refreshing opportunities: ${e.message}")
+            }
+        }
     }
 
     private fun refreshData() {
@@ -449,92 +474,7 @@ class MainViewModel(application: AndroidApp) : AndroidViewModel(application) {
             }
         }
     }
-
-    // AI Opportunity Methods
-    fun searchAIOpportunities(query: String, onResult: (Boolean, List<Map<String, String>>, String?) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val userRole = currentUser.value?.role ?: "Student"
-                val userEmail = currentUser.value?.email ?: ""
-                val response = api.searchAIOpportunities(mapOf("query" to query))
-                if (response.isSuccessful) {
-                    val result = response.body()
-                    if (result != null && result["success"] == true) {
-                        val opportunities = result["opportunities"] as? List<Map<String, String>> ?: emptyList()
-                        onResult(true, opportunities, null)
-                    } else {
-                        onResult(false, emptyList(), result?.get("error")?.toString() ?: "Unknown error")
-                    }
-                } else {
-                    onResult(false, emptyList(), "API error: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                onResult(false, emptyList(), e.message)
-            }
-        }
-    }
-
-    fun fetchPendingAIOpportunities(onResult: (Boolean, List<Map<String, String>>) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val response = api.getPendingAIOpportunities()
-                if (response.isSuccessful) {
-                    val result = response.body()
-                    if (result != null) {
-                        val opportunities = result["opportunities"] as? List<Map<String, String>> ?: emptyList()
-                        onResult(true, opportunities)
-                    } else {
-                        onResult(false, emptyList())
-                    }
-                } else {
-                    onResult(false, emptyList())
-                }
-            } catch (e: Exception) {
-                onResult(false, emptyList())
-            }
-        }
-    }
-
-    fun approveAIOpportunity(id: String, onResult: (Boolean, String?) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val response = api.approveAIOpportunity(id)
-                if (response.isSuccessful) {
-                    val result = response.body()
-                    if (result != null && result["success"] == true) {
-                        onResult(true, result["message"]?.toString())
-                    } else {
-                        onResult(false, result?.get("error")?.toString() ?: "Unknown error")
-                    }
-                } else {
-                    onResult(false, "API error: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                onResult(false, e.message)
-            }
-        }
-    }
-
-    fun rejectAIOpportunity(id: String, onResult: (Boolean, String?) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val response = api.rejectAIOpportunity(id)
-                if (response.isSuccessful) {
-                    val result = response.body()
-                    if (result != null && result["success"] == true) {
-                        onResult(true, result["message"]?.toString())
-                    } else {
-                        onResult(false, result?.get("error")?.toString() ?: "Unknown error")
-                    }
-                } else {
-                    onResult(false, "API error: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                onResult(false, e.message)
-            }
-        }
-    }
-
+    
     // 🔐 SUPER ADMIN FUNCTIONS
     
     // State for super admin notifications and requests
@@ -674,6 +614,147 @@ class MainViewModel(application: AndroidApp) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+    
+    // 🤖 AI Resume Analysis
+    fun analyzeResume(resumeText: String, onResult: (Boolean, ResumeAnalysis?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val request = mapOf("resumeText" to resumeText)
+                val response = api.analyzeResume(request)
+                if (response.isSuccessful) {
+                    val analysis = response.body()
+                    onResult(true, analysis)
+                } else {
+                    println("❌ Resume analysis failed: ${response.errorBody()?.string()}")
+                    onResult(false, null)
+                }
+            } catch (e: Exception) {
+                println("❌ Resume analysis error: ${e.message}")
+                onResult(false, null)
+            }
+        }
+    }
+    
+    // 📊 Skills Gap Analysis
+    fun analyzeSkillsGap(resumeText: String, targetRole: String, onResult: (Boolean, SkillsGapAnalysis?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val request = mapOf("resumeText" to resumeText, "targetRole" to targetRole)
+                val response = api.analyzeSkillsGap(request)
+                if (response.isSuccessful) {
+                    val analysis = response.body()
+                    onResult(true, analysis)
+                } else {
+                    println("❌ Skills gap analysis failed: ${response.errorBody()?.string()}")
+                    onResult(false, null)
+                }
+            } catch (e: Exception) {
+                println("❌ Skills gap analysis error: ${e.message}")
+                e.printStackTrace()
+                onResult(false, null)
+            }
+        }
+    }
+    
+    // 🤖 AI Opportunity Discovery (Admin only)
+    val aiDiscoveredOpportunities = mutableStateListOf<Map<String, String>>()
+    var isFetchingAIOpportunities = mutableStateOf(false)
+    
+    fun fetchAIOpportunities(onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                isFetchingAIOpportunities.value = true
+                val response = api.fetchAIOpportunities()
+                isFetchingAIOpportunities.value = false
+                
+                if (response.isSuccessful) {
+                    fetchPendingAIOpportunities()
+                    onResult(true, null)
+                } else {
+                    val error = response.errorBody()?.string() ?: "Failed to fetch opportunities"
+                    onResult(false, error)
+                }
+            } catch (e: Exception) {
+                isFetchingAIOpportunities.value = false
+                onResult(false, e.message)
+            }
+        }
+    }
+    
+    fun fetchPendingAIOpportunities() {
+        viewModelScope.launch {
+            try {
+                println("🔄 Fetching pending AI opportunities...")
+                val response = api.getPendingAIOpportunities()
+                if (response.isSuccessful) {
+                    val opportunities = response.body() ?: emptyList()
+                    println("✅ Fetched ${opportunities.size} pending opportunities from server")
+                    aiDiscoveredOpportunities.clear()
+                    aiDiscoveredOpportunities.addAll(opportunities)
+                    println("📋 Updated aiDiscoveredOpportunities list with ${aiDiscoveredOpportunities.size} items")
+                } else {
+                    println("❌ Failed to fetch pending opportunities: ${response.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                println("❌ Error fetching pending AI opportunities: ${e.message}")
+                e.printStackTrace()
+            }
+        }
+    }
+    
+    fun approveAIOpportunity(id: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = api.approveAIOpportunity(id)
+                if (response.isSuccessful) {
+                    fetchPendingAIOpportunities()
+                    // Also refresh main opportunities list so it appears in Manage tab
+                    refreshOpportunities()
+                    onResult(true, null)
+                } else {
+                    onResult(false, response.errorBody()?.string() ?: "Failed to approve")
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message)
+            }
+        }
+    }
+    
+    fun rejectAIOpportunity(id: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = api.rejectAIOpportunity(id)
+                if (response.isSuccessful) {
+                    fetchPendingAIOpportunities()
+                    onResult(true, null)
+                } else {
+                    onResult(false, response.errorBody()?.string() ?: "Failed to reject")
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message)
+            }
+        }
+    }
+    
+    // 📄 Extract text from uploaded file (PDF, DOCX, etc.)
+    suspend fun extractTextFromFile(file: File): String? {
+        return try {
+            val requestFile = file.asRequestBody("application/octet-stream".toMediaTypeOrNull())
+            val filePart = MultipartBody.Part.createFormData("file", file.name, requestFile)
+            
+            val response = api.extractTextFromFile(filePart)
+            if (response.isSuccessful) {
+                response.body()?.get("text")
+            } else {
+                println("❌ Failed to extract text: ${response.errorBody()?.string()}")
+                null
+            }
+        } catch (e: Exception) {
+            println("❌ Error extracting text: ${e.message}")
+            e.printStackTrace()
+            null
         }
     }
 }

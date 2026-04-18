@@ -261,6 +261,7 @@ fun Sidebar(
             Triple("Opportunities", Icons.Default.Work, "opportunities"),
             Triple("My Applications", Icons.Default.Assignment, "myApplications"),
             Triple("Resume Builder", Icons.Default.Description, "resumeBuilder"),
+            Triple("AI Resume Analysis", Icons.Default.AutoAwesome, "aiResumeAnalysis"),
             Triple("CGPA Tracker", Icons.Default.BarChart, "cgpaTracker"),
             Triple("Saved", Icons.Default.Bookmark, "saved")
         )
@@ -336,7 +337,7 @@ fun StatsGrid(navController: NavController, mainViewModel: MainViewModel) {
     val stats = listOf(
         Stat(opportunitiesCount, "Opportunities", Icons.AutoMirrored.Filled.TrendingUp, Color(0xFF34A853), "opportunities"),
         Stat(appliedCount, "Applied", Icons.Default.CheckCircle, Color(0xFF1A73E8), "myApplications"),
-        Stat(scholarshipCount, "Scholarships", Icons.Default.School, Color(0xFFFBBC04), "opportunities?filter=Scholarship"),
+        Stat(scholarshipCount, "Scholarships", Icons.Default.School, Color(0xFFFBBC04), "opportunities/Scholarship"),
         Stat("3", "Notifications", Icons.Default.Notifications, Color(0xFFEA4335), null)
     )
 

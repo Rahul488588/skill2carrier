@@ -99,9 +99,17 @@ fun AdminScreen(navController: NavController, mainViewModel: MainViewModel) {
     
     // Load super admin data when tab is selected
     LaunchedEffect(selectedTab) {
-        if (isSuperAdmin && selectedTab == 3) {
+        if (isSuperAdmin && selectedTab == 4) {
             mainViewModel.fetchSuperAdminNotifications()
             mainViewModel.fetchPendingAdminRequests()
+        }
+        // Load AI discovered opportunities when AI Discover tab is selected
+        if (selectedTab == 3) {
+            mainViewModel.fetchPendingAIOpportunities()
+        }
+        // Refresh main opportunities list when Manage tab is selected
+        if (selectedTab == 2) {
+            mainViewModel.refreshOpportunities()
         }
     }
 
@@ -178,7 +186,7 @@ fun AdminScreen(navController: NavController, mainViewModel: MainViewModel) {
                     0 -> AdminOverview(onPostClick = { showAddOpportunity = true }, mainViewModel = mainViewModel)
                     1 -> AdminApplicationsList(mainViewModel = mainViewModel)
                     2 -> AdminManageContent(mainViewModel = mainViewModel)
-                    3 -> AIDiscoverTab(mainViewModel = mainViewModel)
+                    3 -> AIDiscoverPanel(mainViewModel = mainViewModel)
                     4 -> if (isSuperAdmin) SuperAdminPanel(mainViewModel = mainViewModel) else AdminOverview(onPostClick = { showAddOpportunity = true }, mainViewModel = mainViewModel)
                 }
             }
@@ -1161,147 +1169,291 @@ fun NotificationCard(notification: com.example.skill2career.network.Notification
     }
 }
 
+// 🤖 AI Discover Panel - For fetching and managing AI-discovered opportunities
 @Composable
-fun AIDiscoverTab(mainViewModel: MainViewModel) {
-    val scope = rememberCoroutineScope()
-    var searchQuery by remember { mutableStateOf("") }
-    var aiOpportunities by remember { mutableStateOf<List<Map<String, String>>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(false) }
+fun AIDiscoverPanel(mainViewModel: MainViewModel) {
+    // Convert to List to ensure recomposition triggers properly
+    val opportunities = mainViewModel.aiDiscoveredOpportunities.toList()
+    val isFetching = mainViewModel.isFetchingAIOpportunities.value
     var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    // Load pending AI opportunities on tab open
-    LaunchedEffect(Unit) {
-        mainViewModel.fetchPendingAIOpportunities { success, opportunities ->
-            if (success) {
-                aiOpportunities = opportunities
-            }
-        }
+    var successMessage by remember { mutableStateOf<String?>(null) }
+    
+    // Debug logging
+    LaunchedEffect(opportunities.size) {
+        println("🎯 AI Discover Panel: ${opportunities.size} opportunities displayed")
     }
-
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Search section
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            label = { Text("Search for opportunities...") },
+        // Header Card
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            trailingIcon = {
-                IconButton(
-                    onClick = {
-                        if (searchQuery.isNotBlank()) {
-                            isLoading = true
-                            errorMessage = null
-                            scope.launch {
-                                mainViewModel.searchAIOpportunities(searchQuery) { success, opportunities, error ->
-                                    isLoading = false
-                                    if (success) {
-                                        aiOpportunities = opportunities
-                                    } else {
-                                        errorMessage = error ?: "Search failed"
-                                    }
-                                }
-                            }
-                        }
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "🤖 AI Opportunity Discovery",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A73E8)
+                )
+                Text(
+                    text = "Use AI to discover current internships and scholarships from around the world. Review and approve opportunities before they become visible to students.",
+                    fontSize = 14.sp,
+                    color = Color(0xFF5F6368)
+                )
+            }
+        }
+        
+        // Fetch Button
+        Button(
+            onClick = {
+                errorMessage = null
+                successMessage = null
+                mainViewModel.fetchAIOpportunities { success, error ->
+                    if (success) {
+                        successMessage = "Successfully fetched opportunities! Review them below."
+                    } else {
+                        errorMessage = error ?: "Failed to fetch opportunities"
                     }
-                ) {
-                    Icon(Icons.Default.Search, contentDescription = "Search")
                 }
             },
-            enabled = !isLoading,
-            singleLine = true
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isFetching,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A73E8))
+        ) {
+            if (isFetching) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Fetching Opportunities...")
+            } else {
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Fetch Latest Opportunities")
+            }
+        }
+        
+        // Status Messages
+        if (errorMessage != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
+            ) {
+                Text(
+                    text = "❌ $errorMessage",
+                    modifier = Modifier.padding(12.dp),
+                    color = Color(0xFFC62828),
+                    fontSize = 14.sp
+                )
+            }
+        }
+        
+        if (successMessage != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))
+            ) {
+                Text(
+                    text = "✅ $successMessage",
+                    modifier = Modifier.padding(12.dp),
+                    color = Color(0xFF2E7D32),
+                    fontSize = 14.sp
+                )
+            }
+        }
+        
+        // Opportunities List
+        Text(
+            text = "Pending Review (${opportunities.size})",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF202124)
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+        
+        if (opportunities.isEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
             ) {
-                CircularProgressIndicator()
-            }
-        } else if (errorMessage != null) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(errorMessage ?: "Error", color = Color.Red)
-            }
-        } else if (aiOpportunities.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.Gray
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("No AI-discovered opportunities yet", color = Color.Gray)
-                    Text("Search above to find opportunities", color = Color.Gray, fontSize = 12.sp)
+                    Text(
+                        text = "No opportunities pending review",
+                        fontSize = 16.sp,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = "Click 'Fetch Latest Opportunities' to discover new ones",
+                        fontSize = 14.sp,
+                        color = Color.LightGray
+                    )
                 }
             }
         } else {
             LazyColumn(
+                modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(aiOpportunities) { opp ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(opp["title"] ?: "", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(opp["company"] ?: "", color = Color.Gray, fontSize = 14.sp)
-                            Text(opp["type"] ?: "", color = Color(0xFF1A73E8), fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                            if (opp["location"] != null) {
-                                Text(opp["location"] ?: "", color = Color.Gray, fontSize = 12.sp)
-                            }
-                            if (opp["deadline"] != null) {
-                                Text("Deadline: ${opp["deadline"]}", color = Color(0xFFF44336), fontSize = 12.sp)
-                            }
-                            if (opp["description"] != null) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(opp["description"] ?: "", fontSize = 12.sp, color = Color.Gray, maxLines = 3)
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(
-                                    onClick = {
-                                        mainViewModel.approveAIOpportunity(opp["id"] ?: "") { success, message ->
-                                            if (success) {
-                                                aiOpportunities = aiOpportunities.filter { it["id"] != opp["id"] }
-                                            }
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Approve", fontSize = 12.sp)
+                items(opportunities) { opp ->
+                    AIOpportunityCard(
+                        opportunity = opp,
+                        onApprove = { id ->
+                            mainViewModel.approveAIOpportunity(id) { success, error ->
+                                if (success) {
+                                    successMessage = "Opportunity approved and published!"
+                                } else {
+                                    errorMessage = error ?: "Failed to approve"
                                 }
-                                Button(
-                                    onClick = {
-                                        mainViewModel.rejectAIOpportunity(opp["id"] ?: "") { success, message ->
-                                            if (success) {
-                                                aiOpportunities = aiOpportunities.filter { it["id"] != opp["id"] }
-                                            }
-                                        }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336)),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Reject", fontSize = 12.sp)
+                            }
+                        },
+                        onReject = { id ->
+                            mainViewModel.rejectAIOpportunity(id) { success, error ->
+                                if (success) {
+                                    successMessage = "Opportunity rejected"
+                                } else {
+                                    errorMessage = error ?: "Failed to reject"
                                 }
                             }
                         }
+                    )
+                }
+            }
+        }
+    }
+}
+
+// AI Opportunity Card
+@Composable
+fun AIOpportunityCard(
+    opportunity: Map<String, String>,
+    onApprove: (String) -> Unit,
+    onReject: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Title and Type
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = opportunity["title"] ?: "Untitled",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF202124)
+                    )
+                    Text(
+                        text = opportunity["organization"] ?: "Unknown Organization",
+                        fontSize = 14.sp,
+                        color = Color(0xFF5F6368)
+                    )
+                }
+                
+                // Type Badge
+                val type = opportunity["type"] ?: "internship"
+                val badgeColor = if (type.lowercase() == "scholarship") Color(0xFF9C27B0) else Color(0xFF1A73E8)
+                Box(
+                    modifier = Modifier
+                        .background(badgeColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = type.replaceFirstChar { it.uppercase() },
+                        fontSize = 12.sp,
+                        color = badgeColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            
+            // Details
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                opportunity["location"]?.let {
+                    if (it.isNotBlank()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(it, fontSize = 13.sp, color = Color.Gray)
+                        }
                     }
+                }
+                
+                opportunity["deadline"]?.let {
+                    if (it.isNotBlank()) {
+                        Text(
+                            text = "Deadline: $it",
+                            fontSize = 13.sp,
+                            color = Color(0xFFE65100),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+            
+            // Description
+            opportunity["description"]?.let {
+                if (it.isNotBlank()) {
+                    Text(
+                        text = it.take(200) + if (it.length > 200) "..." else "",
+                        fontSize = 13.sp,
+                        color = Color(0xFF5F6368),
+                        maxLines = 3
+                    )
+                }
+            }
+            
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { onApprove(opportunity["id"] ?: "") },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Approve")
+                }
+                
+                OutlinedButton(
+                    onClick = { onReject(opportunity["id"] ?: "") },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Reject")
                 }
             }
         }

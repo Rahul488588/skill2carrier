@@ -76,12 +76,25 @@ interface ApiService {
     @POST("superadmin/mark-notification-read")
     suspend fun markNotificationRead(@Body request: Map<String, String>): Response<Unit>
     
-    // 🤖 AI Opportunity Endpoints
-    @POST("admin/ai/opportunities/search")
-    suspend fun searchAIOpportunities(@Body request: Map<String, String>): Response<Map<String, Any>>
+    // 🤖 AI Resume Analysis
+    @POST("ai/analyze-resume")
+    suspend fun analyzeResume(@Body request: Map<String, String>): Response<ResumeAnalysis>
+    
+    // � Skills Gap Analysis
+    @POST("ai/skills-gap")
+    suspend fun analyzeSkillsGap(@Body request: Map<String, String>): Response<SkillsGapAnalysis>
+    
+    // �📄 Extract text from uploaded PDF/DOCX files
+    @Multipart
+    @POST("extract-text")
+    suspend fun extractTextFromFile(@Part file: MultipartBody.Part): Response<Map<String, String>>
+    
+    // 🤖 AI Opportunity Discovery (Admin only)
+    @POST("admin/fetch-opportunities")
+    suspend fun fetchAIOpportunities(): Response<Map<String, Any>>
     
     @GET("admin/ai/opportunities/pending")
-    suspend fun getPendingAIOpportunities(): Response<Map<String, Any>>
+    suspend fun getPendingAIOpportunities(): Response<List<Map<String, String>>>
     
     @POST("admin/ai/opportunities/{id}/approve")
     suspend fun approveAIOpportunity(@Path("id") id: String): Response<Map<String, Any>>
@@ -126,4 +139,22 @@ data class AdminRequest(
     val branch: String,
     val requestDate: String,
     val status: String
+)
+
+// 🤖 AI Resume Analysis Data Class
+data class ResumeAnalysis(
+    val summary: String,
+    val strengths: List<String>,
+    val improvements: List<String>,
+    val recommendedCareers: List<String>
+)
+
+// 📊 Skills Gap Analysis Data Class
+data class SkillsGapAnalysis(
+    val targetRole: String,
+    val currentSkills: List<String>,
+    val requiredSkills: List<String>,
+    val missingSkills: List<String>,
+    val recommendations: List<String>,
+    val learningResources: List<String>
 )
